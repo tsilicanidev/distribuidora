@@ -1,0 +1,82 @@
+-- Clean up any existing problematic schema
+DO $$ 
+BEGIN
+  -- Drop old functions and triggers
+  DROP FUNCTION IF EXISTS public.username_login(text, text);
+  DROP TRIGGER IF EXISTS validate_email_trigger ON auth.users;
+  DROP FUNCTION IF EXISTS validate_email();
+  DROP FUNCTION IF EXISTS is_valid_email(text);
+END $$;
+
+-- Ensure profiles table has correct structure
+DO $$
+BEGIN
+  -- Remove username column if it exists
+  IF EXISTS (
+    SELECT 1 
+    FROM information_schema.columns 
+    WHERE table_name = 'profiles' 
+    AND column_name = 'username'
+  ) THEN
+    ALTER TABLE profiles DROP COLUMN username;
+  END IF;
+
+  -- Remove old constraints
+  ALTER TABLE profiles DROP CONSTRAINT IF EXISTS username_format;
+  ALTER TABLE profiles DROP CONSTRAINT IF EXISTS full_name_format;
+END $$;
+
+-- Update profiles table structure
+ALTER TABLE profiles
+ALTER COLUMN full_name SET NOT NULL,
+ALTER COLUMN role SET NOT NULL;
+
+-- Create admin user
+DO $$
+DECLARE
+  admin_id uuid;
+BEGIN
+  -- Check if admin user exists
+  SELECT id INTO admin_id
+  FROM auth.users
+  WHERE email = 'tsilicani@gmail.com';
+
+  IF admin_id IS NULL THEN
+    -- Create new admin user
+    INSERT INTO auth.users (
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      role,
+      aud,
+      created_at,
+      updated_at,
+      confirmation_token,
+      recovery_token,
+      instance_id,
+      is_super_admin
+    )
+    VALUES (
+      'tsilicani@gmail.com',
+      crypt('admin123', gen_salt('bf')),
+      now(),
+      '{"provider":"email","providers":["email"]}',
+      '{"full_name":"Administrator"}',
+      'authenticated',
+      'authenticated',
+      now(),
+      now(),
+      encode(gen_random_bytes(32), 'hex'),
+      encode(gen_random_bytes(32), 'hex'),
+      '00000000-0000-0000-0000-000000000000',
+      false
+    )
+    RETURNING id INTO admin_id;
+
+    -- Create admin profile
+    INSERT INTO profiles (id, full_name, role)
+    VALUES (admin_id, 'Administrator', 'admin');
+  END IF;
+END $$;
