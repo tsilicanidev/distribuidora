@@ -181,27 +181,29 @@ export function CustomerOrder() {
       // Calculate total amount
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // Create order
+      // Create sales order
       const { data: order, error: orderError } = await supabase
-        .from('customer_orders')
+        .from('sales_orders')
         .insert([{
           customer_id: customer.id,
-          order_link_id: validation.orderLink.id,
+          seller_id: null, // No seller for customer orders
           status: 'pending',
           total_amount: totalAmount,
-          notes: notes || null
+          commission_amount: 0, // No commission for customer orders
+          notes: notes || null,
+          created_at: new Date().toISOString()
         }])
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // Create sales order items
       const { error: itemsError } = await supabase
-        .from('customer_order_items')
+        .from('sales_order_items')
         .insert(
           items.map(item => ({
-            order_id: order.id,
+            sales_order_id: order.id,
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
@@ -210,6 +212,31 @@ export function CustomerOrder() {
         );
 
       if (itemsError) throw itemsError;
+
+      // Update product stock quantities
+      for (const item of items) {
+        const { error: stockError } = await supabase
+          .from('products')
+          .update({
+            stock_quantity: supabase.sql`stock_quantity - ${item.quantity}`
+          })
+          .eq('id', item.product_id);
+
+        if (stockError) throw stockError;
+
+        // Record stock movement
+        const { error: movementError } = await supabase
+          .from('stock_movements')
+          .insert([{
+            product_id: item.product_id,
+            quantity: item.quantity,
+            type: 'OUT',
+            reference_id: order.id,
+            created_by: null // System generated movement
+          }]);
+
+        if (movementError) throw movementError;
+      }
 
       // Deactivate the order link
       const { error: linkError } = await supabase
