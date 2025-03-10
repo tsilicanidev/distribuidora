@@ -1,4 +1,4 @@
-{`import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, UserPlus, X, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -11,7 +11,7 @@ interface User {
   created_at: string;
 }
 
-export function Settings() {
+export default function Settings() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -283,7 +283,7 @@ export function Settings() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={\`px-2 inline-flex text-xs leading-5 font-semibold rounded-full \${getRoleBadgeColor(user.role)}\`}>
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
                 </td>
@@ -488,4 +488,4 @@ export function Settings() {
   );
 }
 
-export default Settings;`}
+export { Settings }

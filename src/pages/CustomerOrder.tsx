@@ -10,6 +10,7 @@ interface Product {
   name: string;
   price: number;
   stock_quantity: number;
+  category: string;
 }
 
 interface OrderItem {
@@ -27,6 +28,7 @@ interface Customer {
   bairro: string;
   cidade: string;
   estado: string;
+  cep: string;
 }
 
 export function CustomerOrder() {
@@ -81,7 +83,7 @@ export function CustomerOrder() {
 
       setCustomer(customerData);
 
-      // Get available products
+      // Get available products with stock
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
@@ -134,8 +136,11 @@ export function CustomerOrder() {
     } else if (field === 'quantity') {
       const quantity = parseInt(value) || 0;
       if (quantity > 0) {
-        currentItem.quantity = quantity;
-        currentItem.total_price = currentItem.unit_price * quantity;
+        const product = products.find(p => p.id === currentItem.product_id);
+        if (product && quantity <= product.stock_quantity) {
+          currentItem.quantity = quantity;
+          currentItem.total_price = currentItem.unit_price * quantity;
+        }
       }
     }
 
