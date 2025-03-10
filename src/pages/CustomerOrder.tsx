@@ -181,8 +181,9 @@ export function CustomerOrder() {
       // Calculate total amount
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // Create sales order
-      const { data: order, error: orderError } = await supabase
+      // Create sales order using service role to bypass RLS
+      const { data: order, error: orderError } = await supabase.auth.admin
+        .createClient(process.env.VITE_SUPABASE_SERVICE_KEY!)
         .from('sales_orders')
         .insert([{
           customer_id: customer.id,
@@ -199,7 +200,8 @@ export function CustomerOrder() {
       if (orderError) throw orderError;
 
       // Create sales order items
-      const { error: itemsError } = await supabase
+      const { error: itemsError } = await supabase.auth.admin
+        .createClient(process.env.VITE_SUPABASE_SERVICE_KEY!)
         .from('sales_order_items')
         .insert(
           items.map(item => ({
@@ -215,7 +217,8 @@ export function CustomerOrder() {
 
       // Update product stock quantities
       for (const item of items) {
-        const { error: stockError } = await supabase
+        const { error: stockError } = await supabase.auth.admin
+          .createClient(process.env.VITE_SUPABASE_SERVICE_KEY!)
           .from('products')
           .update({
             stock_quantity: supabase.sql`stock_quantity - ${item.quantity}`
@@ -225,7 +228,8 @@ export function CustomerOrder() {
         if (stockError) throw stockError;
 
         // Record stock movement
-        const { error: movementError } = await supabase
+        const { error: movementError } = await supabase.auth.admin
+          .createClient(process.env.VITE_SUPABASE_SERVICE_KEY!)
           .from('stock_movements')
           .insert([{
             product_id: item.product_id,
@@ -239,7 +243,8 @@ export function CustomerOrder() {
       }
 
       // Deactivate the order link
-      const { error: linkError } = await supabase
+      const { error: linkError } = await supabase.auth.admin
+        .createClient(process.env.VITE_SUPABASE_SERVICE_KEY!)
         .from('customer_order_links')
         .update({ active: false })
         .eq('id', validation.orderLink.id);
