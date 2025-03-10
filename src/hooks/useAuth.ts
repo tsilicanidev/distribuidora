@@ -62,7 +62,6 @@ export function useAuth() {
     isMaster: isUserAdminOrMaster,
     isAdmin: hasPermissions,
     isManager: metadata?.role === 'manager',
-    isMaster: metadata?.role === 'master',
     isSeller: metadata?.role === 'seller',
     isWarehouse: metadata?.role === 'warehouse'
   };
