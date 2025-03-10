@@ -34,7 +34,7 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS profiles (
   id uuid PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   full_name text,
-  role text CHECK (role IN ('admin', 'manager', 'seller', 'warehouse', 'driver')),
+  role text CHECK (role IN ('admin', 'manager', 'master', 'seller', 'warehouse', 'driver')),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -113,7 +113,7 @@ CREATE POLICY "Managers can manage products"
   USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND role IN ('admin', 'manager')
+      WHERE id = auth.uid() AND role IN ('admin', 'manager', 'master')
     )
   );
 
@@ -131,7 +131,7 @@ CREATE POLICY "Managers can view all profiles"
   USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND role IN ('admin', 'manager')
+      WHERE id = auth.uid() AND role IN ('admin', 'manager', 'master')
     )
   );
 
@@ -149,7 +149,7 @@ CREATE POLICY "Managers can manage customers"
   USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND role IN ('admin', 'manager')
+      WHERE id = auth.uid() AND role IN ('admin', 'manager', 'master')
     )
   );
 
@@ -174,7 +174,7 @@ CREATE POLICY "Sellers can view their own orders"
     auth.uid() = seller_id OR
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND role IN ('admin', 'manager')
+      WHERE id = auth.uid() AND role IN ('admin', 'manager', 'master')
     )
   );
 
@@ -185,7 +185,7 @@ CREATE POLICY "Managers can update orders"
   USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND role IN ('admin', 'manager')
+      WHERE id = auth.uid() AND role IN ('admin', 'manager', 'master')
     )
   );
 
@@ -212,7 +212,7 @@ CREATE POLICY "Users can view order items"
         seller_id = auth.uid() OR
         EXISTS (
           SELECT 1 FROM profiles
-          WHERE id = auth.uid() AND role IN ('admin', 'manager')
+          WHERE id = auth.uid() AND role IN ('admin', 'manager', 'master')
         )
       )
     )

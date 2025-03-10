@@ -148,9 +148,7 @@ export function Settings() {
     const labels: Record<string, string> = {
       admin: 'Administrador',
       manager: 'Gerente',
-      seller: 'Vendedor',
-      driver: 'Motorista',
-      warehouse: 'Estoque'
+      seller: 'Vendedor'
     };
     return labels[role] || role;
   };
@@ -159,9 +157,7 @@ export function Settings() {
     const colors: Record<string, string> = {
       admin: 'bg-red-100 text-red-800',
       manager: 'bg-blue-100 text-blue-800',
-      seller: 'bg-green-100 text-green-800',
-      driver: 'bg-yellow-100 text-yellow-800',
-      warehouse: 'bg-orange-100 text-orange-800'
+      seller: 'bg-green-100 text-green-800'
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
@@ -355,8 +351,6 @@ export function Settings() {
                   className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
                 >
                   <option value="seller">Vendedor</option>
-                  <option value="driver">Motorista</option>
-                  <option value="warehouse">Estoque</option>
                   <option value="manager">Gerente</option>
                   <option value="admin">Administrador</option>
                 </select>

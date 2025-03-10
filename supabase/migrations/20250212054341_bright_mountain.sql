@@ -128,7 +128,7 @@ CREATE POLICY "Staff can manage vehicles"
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.uid() = id 
-      AND raw_user_meta_data->>'role' IN ('admin', 'manager')
+      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 
@@ -147,7 +147,7 @@ CREATE POLICY "Staff can manage routes"
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.uid() = id 
-      AND raw_user_meta_data->>'role' IN ('admin', 'manager')
+      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 
@@ -204,7 +204,7 @@ CREATE POLICY "Staff can manage maintenance records"
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.uid() = id 
-      AND raw_user_meta_data->>'role' IN ('admin', 'manager')
+      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 
@@ -223,7 +223,7 @@ CREATE POLICY "Staff can manage driver assignments"
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.uid() = id 
-      AND raw_user_meta_data->>'role' IN ('admin', 'manager')
+      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 

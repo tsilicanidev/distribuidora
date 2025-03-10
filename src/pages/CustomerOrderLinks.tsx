@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Copy, Link2, CheckCircle2, XCircle, AlertTriangle, X } from 'lucide-react';
+import { Plus, Search, Copy, CheckCircle2, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { createOrderLink } from '../utils/token';
 
@@ -19,7 +19,7 @@ interface OrderLink {
   customer: Customer;
 }
 
-export function CustomerOrderLinks() {
+export default function CustomerOrderLinks() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orderLinks, setOrderLinks] = useState<OrderLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,10 +51,11 @@ export function CustomerOrderLinks() {
         .eq('id', user.id)
         .single();
 
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'manager' && profile.role !== 'master')) {
         throw new Error('Permissão negada');
       }
 
+      // Fetch customers and order links in parallel
       const [customersResponse, linksResponse] = await Promise.all([
         supabase
           .from('customers')
@@ -87,7 +88,7 @@ export function CustomerOrderLinks() {
     }
   }
 
-  const generateOrderLink = async () => {
+  const handleGenerateLink = async () => {
     if (!selectedCustomer) {
       setError('Selecione um cliente');
       return;
@@ -113,7 +114,6 @@ export function CustomerOrderLinks() {
     if (!confirm('Tem certeza que deseja remover este link? Esta ação não pode ser desfeita.')) return;
 
     try {
-      // Delete the link
       const { error } = await supabase
         .from('customer_order_links')
         .delete()
@@ -121,7 +121,6 @@ export function CustomerOrderLinks() {
 
       if (error) throw error;
 
-      // Remove from state
       setOrderLinks(orderLinks.filter(l => l.id !== link.id));
     } catch (error) {
       console.error('Error removing link:', error);
@@ -158,27 +157,82 @@ export function CustomerOrderLinks() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Links para Pedidos de Clientes</h1>
-        <button
-          onClick={() => {
-            setSelectedCustomer('');
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            setExpirationDate(tomorrow.toISOString().split('T')[0]);
-            setGeneratedToken(null);
-            setShowModal(true);
-          }}
-          className="flex items-center px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Gerar Novo Link
-        </button>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-500 rounded">
-          {error}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cliente *
+            </label>
+            <select
+              value={selectedCustomer}
+              onChange={(e) => setSelectedCustomer(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-[#FF8A00]"
+              required
+            >
+              <option value="">Selecione um cliente</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.razao_social} ({customer.cpf_cnpj})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Data de Expiração *
+            </label>
+            <input
+              type="date"
+              value={expirationDate}
+              onChange={(e) => setExpirationDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-[#FF8A00]"
+              required
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={handleGenerateLink}
+              className="w-full flex items-center justify-center px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Gerar Link
+            </button>
+          </div>
         </div>
-      )}
+
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 text-red-500 rounded">
+            {error}
+          </div>
+        )}
+
+        {generatedToken && (
+          <div className="mt-4 p-4 bg-green-50 rounded-lg">
+            <h3 className="text-lg font-medium text-green-900 mb-2">Link Gerado com Sucesso!</h3>
+            <div className="flex items-center justify-between bg-white p-3 rounded border border-green-200">
+              <code className="text-sm font-mono text-gray-900">
+                {`${window.location.origin}/order/${generatedToken}`}
+              </code>
+              <button
+                onClick={() => copyToClipboard(generatedToken)}
+                className="ml-2 text-green-600 hover:text-green-700"
+                title="Copiar Link"
+              >
+                {copiedToken === generatedToken ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : (
+                  <Copy className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="mb-6">
         <div className="relative">
@@ -201,7 +255,7 @@ export function CustomerOrderLinks() {
                 Cliente
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Token
+                Link
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -218,161 +272,69 @@ export function CustomerOrderLinks() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredLinks.map((link) => (
-              <tr key={link.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {link.customer.razao_social}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {link.customer.cpf_cnpj}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center space-x-2">
-                    <Link2 className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm font-mono text-gray-500">
-                      {link.token}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    link.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {link.active ? 'Ativo' : 'Inativo'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {link.expires_at ? new Date(link.expires_at).toLocaleDateString() : 'Sem expiração'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(link.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => copyToClipboard(link.token)}
-                    className="text-[#FF8A00] hover:text-[#FF8A00]/80 mr-3"
-                    title="Copiar Link"
-                  >
-                    {copiedToken === link.token ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <Copy className="h-5 w-5" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => removeLink(link)}
-                    className="text-red-600 hover:text-red-900"
-                    title="Remover Link"
-                  >
-                    <XCircle className="h-5 w-5" />
-                  </button>
+            {filteredLinks.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  Nenhum link encontrado.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredLinks.map((link) => (
+                <tr key={link.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {link.customer.razao_social}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {link.customer.cpf_cnpj}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center space-x-2">
+                      <code className="text-sm font-mono text-gray-500">
+                        {link.token}
+                      </code>
+                      <button
+                        onClick={() => copyToClipboard(link.token)}
+                        className="text-gray-400 hover:text-gray-600"
+                        title="Copiar Link"
+                      >
+                        {copiedToken === link.token ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      link.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {link.active ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {link.expires_at ? new Date(link.expires_at).toLocaleDateString() : 'Sem expiração'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(link.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => removeLink(link)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Remover Link"
+                    >
+                      <XCircle className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Gerar Link para Cliente
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Cliente *
-                </label>
-                <select
-                  value={selectedCustomer}
-                  onChange={(e) => {
-                    setSelectedCustomer(e.target.value);
-                    if (e.target.value) {
-                      generateOrderLink();
-                    }
-                  }}
-                  className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                >
-                  <option value="">Selecione um cliente</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.razao_social} ({customer.cpf_cnpj})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Data de Expiração *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={expirationDate}
-                  onChange={(e) => {
-                    setExpirationDate(e.target.value);
-                    if (selectedCustomer) {
-                      generateOrderLink();
-                    }
-                  }}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                />
-              </div>
-
-              {generatedToken && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Link Gerado
-                  </label>
-                  <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-300">
-                    <code className="text-sm font-mono text-gray-900">{generatedToken}</code>
-                    <button
-                      onClick={() => copyToClipboard(generatedToken)}
-                      className="ml-2 text-[#FF8A00] hover:text-[#FF8A00]/80"
-                      title="Copiar Link"
-                    >
-                      {copiedToken === generatedToken ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <Copy className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500">
-                    URL completa: {window.location.origin}/order/{generatedToken}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex justify-end mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90"
-                >
-                  Ok
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-
-export default CustomerOrderLinks;

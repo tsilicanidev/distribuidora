@@ -25,7 +25,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const { isSeller, isAdmin, isManager } = useAuth();
+  const { isSeller, isAdmin, isManager, isMaster } = useAuth();
 
   useEffect(() => {
     const handleResize = () => {
@@ -124,7 +124,7 @@ export function Sidebar() {
             <span className="font-medium">Pedidos de Venda</span>
           </NavLink>
 
-          {(isAdmin || isManager) && (
+          {(isAdmin || isManager || isMaster) && (
             <NavLink
               to="/customer-orders"
               className={({ isActive }) =>

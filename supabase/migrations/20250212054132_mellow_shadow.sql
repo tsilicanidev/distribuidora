@@ -26,7 +26,7 @@ CREATE POLICY "View all profiles"
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.uid() = id 
-      AND raw_user_meta_data->>'role' IN ('admin', 'manager')
+      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 

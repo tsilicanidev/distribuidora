@@ -79,7 +79,7 @@ CREATE POLICY "customers_insert_policy"
       WHERE id = auth.uid()
       AND (
         email = 'tsilicani@gmail.com' OR
-        raw_user_meta_data->>'role' IN ('admin', 'manager')
+        raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
       )
     )
   );
@@ -93,7 +93,7 @@ CREATE POLICY "customers_update_policy"
       WHERE id = auth.uid()
       AND (
         email = 'tsilicani@gmail.com' OR
-        raw_user_meta_data->>'role' IN ('admin', 'manager')
+        raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
       )
     )
   );

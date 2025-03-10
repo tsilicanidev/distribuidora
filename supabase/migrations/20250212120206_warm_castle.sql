@@ -17,7 +17,7 @@ CREATE POLICY "customers_insert"
     auth.uid() IN (
       SELECT id FROM auth.users
       WHERE email = 'tsilicani@gmail.com'
-      OR raw_user_meta_data->>'role' IN ('admin', 'manager')
+      OR raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 
@@ -28,7 +28,7 @@ CREATE POLICY "customers_update"
     auth.uid() IN (
       SELECT id FROM auth.users
       WHERE email = 'tsilicani@gmail.com'
-      OR raw_user_meta_data->>'role' IN ('admin', 'manager')
+      OR raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 
@@ -39,7 +39,7 @@ CREATE POLICY "customers_delete"
     auth.uid() IN (
       SELECT id FROM auth.users
       WHERE email = 'tsilicani@gmail.com'
-      OR raw_user_meta_data->>'role' IN ('admin', 'manager')
+      OR raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 
@@ -55,7 +55,7 @@ BEGIN
     WHERE id = auth.uid()
     AND (
       email = 'tsilicani@gmail.com'
-      OR raw_user_meta_data->>'role' IN ('admin', 'manager')
+      OR raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
     )
   );
 END;

@@ -18,9 +18,12 @@ export function Login() {
       try {
         // Clear any old auth tokens
         localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('sb-auth-token');
         
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        
+        if (session?.user) {
           const from = (location.state as any)?.from?.pathname || '/';
           navigate(from, { replace: true });
         }
@@ -42,53 +45,69 @@ export function Login() {
     try {
       // Clear any old auth tokens
       localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('sb-auth-token');
       
-      // Always try sign in first
+      // First try to sign in
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email.trim(),
         password: formData.password.trim(),
       });
 
-      if (!signInError && data.user) {
+      if (signInError) {
+        // If this is the admin user and sign in fails, try to create the account
+        if (formData.email === 'admin@admin.com') {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: formData.email,
+            password: formData.password,
+            options: {
+              data: {
+                full_name: 'Admin',
+                role: 'admin'
+              }
+            }
+          });
+
+          if (signUpError) throw signUpError;
+
+          if (signUpData.user) {
+            // Try signing in with the newly created account
+            const { data: signInData, error: finalSignInError } = await supabase.auth.signInWithPassword({
+              email: formData.email,
+              password: formData.password,
+            });
+
+            if (finalSignInError) throw finalSignInError;
+            if (signInData.user) {
+              const from = (location.state as any)?.from?.pathname || '/';
+              navigate(from, { replace: true });
+              return;
+            }
+          }
+        } else {
+          throw signInError;
+        }
+      }
+
+      if (data.user) {
         const from = (location.state as any)?.from?.pathname || '/';
         navigate(from, { replace: true });
         return;
       }
 
-      // If sign in fails and this is the admin user, create the account
-      if (formData.email === 'admin@admin.com') {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              full_name: 'Admin',
-              role: 'admin'
-            }
-          }
-        });
-
-        if (!signUpError && signUpData.user) {
-          // Try signing in with the newly created account
-          const { data: signInData, error: finalSignInError } = await supabase.auth.signInWithPassword({
-            email: formData.email,
-            password: formData.password,
-          });
-
-          if (!finalSignInError && signInData.user) {
-            const from = (location.state as any)?.from?.pathname || '/';
-            navigate(from, { replace: true });
-            return;
-          }
-        }
-      }
-
-      // If we get here, authentication failed
-      throw new Error('Email ou senha inválidos');
-
+      throw new Error('Falha na autenticação');
     } catch (err) {
       console.error('Auth error:', err);
-      setError('Email ou senha inválidos');
+      if (err instanceof Error) {
+        if (err.message.includes('Invalid login credentials')) {
+          setError('Email ou senha incorretos');
+        } else if (err.message.includes('Email not confirmed')) {
+          setError('Por favor, confirme seu email antes de fazer login');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Erro ao fazer login. Por favor, tente novamente.');
+      }
     } finally {
       setLoading(false);
     }

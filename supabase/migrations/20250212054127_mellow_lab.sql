@@ -31,7 +31,7 @@ CREATE POLICY "Staff can view stock movements"
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.uid() = id 
-      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'warehouse')
+      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'warehouse', 'master')
     )
   );
 
@@ -43,6 +43,6 @@ CREATE POLICY "Staff can create stock movements"
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.uid() = id 
-      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'warehouse')
+      AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'warehouse', 'master')
     )
   );
