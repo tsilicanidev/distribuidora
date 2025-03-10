@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { isAdminOrMaster, hasAdminPermissions } from '../lib/supabase';
 
 interface UserMetadata {
   full_name: string;
@@ -14,7 +13,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     const getInitialSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -23,7 +21,7 @@ export function useAuth() {
           setMetadata(session.user.user_metadata as UserMetadata);
         }
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('Erro ao obter sessão:', error);
         setUser(null);
         setMetadata(null);
       } finally {
@@ -33,37 +31,34 @@ export function useAuth() {
 
     getInitialSession();
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setMetadata(session.user.user_metadata as UserMetadata);
-      } else {
-        setMetadata(null);
+    // Atualiza quando a autenticação muda
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          setMetadata(session.user.user_metadata as UserMetadata);
+        } else {
+          setMetadata(null);
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  const isUserAdminOrMaster = user?.email ? isAdminOrMaster(user.email) : false;
-  const isAdminRole = metadata?.role === 'admin';
-  const hasPermissions = user?.email ? hasAdminPermissions(user.email, metadata?.role || '') : false;
+  // Obtém a role do usuário autenticado
+  const role = metadata?.role || 'seller'; // Se não houver role, assume "seller"
 
   return { 
     user,
     metadata,
     loading,
-    isMaster: isUserAdminOrMaster,
-    isAdmin: hasPermissions,
-    isManager: metadata?.role === 'manager',
-    isMaster: metadata?.role === 'master',
-    isSeller: metadata?.role === 'seller',
-    isWarehouse: metadata?.role === 'warehouse'
+    isAdmin: role === 'admin',
+    isManager: role === 'manager',
+    isMaster: role === 'master',
+    isSeller: role === 'seller'
   };
 }

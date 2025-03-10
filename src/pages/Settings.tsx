@@ -24,13 +24,13 @@ export function Settings() {
   });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin, isManager, isMaster } = useAuth();
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isManager || isMaster) {
       fetchUsers();
     }
-  }, [isAdmin]);
+  }, [isAdmin, isManager, isMaster]);
 
   async function fetchUsers() {
     try {
@@ -133,7 +133,7 @@ export function Settings() {
     }
   };
 
-  if (!isAdmin) {
+  if (!isAdmin && !isManager && !isMaster) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Configurações</h1>
