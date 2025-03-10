@@ -131,29 +131,54 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Get next order number
-      const { data: numberData } = await supabase.rpc('get_next_order_number');
-
       // Calculate totals
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
       const commissionAmount = totalAmount * 0.05; // 5% commission
 
-      // Create order
-      const { data: orderData, error: orderError } = await supabase
-        .from('sales_orders')
-        .insert([{
-          number: numberData,
-          customer_id: formData.customer_id,
-          seller_id: user.id,
-          status: 'pending',
-          notes: formData.notes,
-          total_amount: totalAmount,
-          commission_amount: commissionAmount
-        }])
-        .select()
-        .single();
+      // Create order with retry logic
+      let orderCreated = false;
+      let retryCount = 0;
+      const maxRetries = 3;
+      let orderData;
 
-      if (orderError) throw orderError;
+      while (!orderCreated && retryCount < maxRetries) {
+        try {
+          const { data: order, error: orderError } = await supabase
+            .from('sales_orders')
+            .insert([{
+              customer_id: formData.customer_id,
+              seller_id: user.id,
+              status: 'pending',
+              notes: formData.notes,
+              total_amount: totalAmount,
+              commission_amount: commissionAmount
+            }])
+            .select()
+            .single();
+
+          if (orderError) {
+            if (retryCount >= maxRetries - 1) {
+              throw orderError;
+            }
+            // Wait before retry with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+            retryCount++;
+            continue;
+          }
+
+          orderData = order;
+          orderCreated = true;
+        } catch (error) {
+          if (retryCount >= maxRetries - 1) {
+            throw error;
+          }
+          retryCount++;
+        }
+      }
+
+      if (!orderData) {
+        throw new Error('Erro ao criar pedido após várias tentativas');
+      }
 
       // Create order items
       const { error: itemsError } = await supabase

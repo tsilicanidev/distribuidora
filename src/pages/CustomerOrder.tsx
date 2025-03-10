@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Minus, Save } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, Minus, Save, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { validateToken } from '../utils/token';
 import { logError } from '../utils/errorLogging';
@@ -176,31 +176,27 @@ export function CustomerOrder() {
       // Calculate total amount
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // Create sales order with anonymous access
+      // Create order
       const { data: order, error: orderError } = await supabase
-        .from('sales_orders')
+        .from('customer_orders')
         .insert([{
           customer_id: customer.id,
+          order_link_id: validation.orderLink.id,
           status: 'pending',
           total_amount: totalAmount,
-          commission_amount: 0,
-          notes: notes || null,
-          order_link_id: validation.orderLink.id,
-          created_through: 'customer_portal'
+          notes: notes || null
         }])
         .select()
         .single();
 
-      if (orderError) {
-        throw new Error('Erro ao criar pedido');
-      }
+      if (orderError) throw orderError;
 
       // Create order items
       const { error: itemsError } = await supabase
-        .from('sales_order_items')
+        .from('customer_order_items')
         .insert(
           items.map(item => ({
-            sales_order_id: order.id,
+            order_id: order.id,
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
@@ -208,9 +204,7 @@ export function CustomerOrder() {
           }))
         );
 
-      if (itemsError) {
-        throw new Error('Erro ao adicionar itens ao pedido');
-      }
+      if (itemsError) throw itemsError;
 
       // Deactivate the order link
       const { error: linkError } = await supabase
@@ -287,17 +281,12 @@ export function CustomerOrder() {
     );
   }
 
-  if (!customer) {
-    return <Navigate to="/token" replace />;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Novo Pedido</h1>
-            <ShoppingCart className="h-8 w-8 text-[#FF8A00]" />
           </div>
 
           <div className="mb-8">
@@ -305,16 +294,16 @@ export function CustomerOrder() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-500">Razão Social</p>
-                <p className="text-base text-gray-900">{customer.razao_social}</p>
+                <p className="text-base text-gray-900">{customer?.razao_social}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">CPF/CNPJ</p>
-                <p className="text-base text-gray-900">{customer.cpf_cnpj}</p>
+                <p className="text-base text-gray-900">{customer?.cpf_cnpj}</p>
               </div>
               <div className="md:col-span-2">
                 <p className="text-sm font-medium text-gray-500">Endereço</p>
                 <p className="text-base text-gray-900">
-                  {customer.endereco}, {customer.bairro}, {customer.cidade} - {customer.estado}
+                  {customer?.endereco}, {customer?.bairro}, {customer?.cidade} - {customer?.estado}
                 </p>
               </div>
             </div>

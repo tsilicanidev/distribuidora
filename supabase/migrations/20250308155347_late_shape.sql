@@ -107,7 +107,7 @@ CREATE POLICY "Allow authenticated to manage drivers"
         EXISTS (
             SELECT 1 FROM profiles
             WHERE id = auth.uid()
-            AND role IN ('admin', 'manager', 'master')
+            AND role IN ('admin', 'manager')
         )
     );
 
@@ -119,7 +119,7 @@ CREATE POLICY "Allow authenticated to manage vehicles"
         EXISTS (
             SELECT 1 FROM profiles
             WHERE id = auth.uid()
-            AND role IN ('admin', 'manager', 'master')
+            AND role IN ('admin', 'manager')
         )
     );
 
@@ -131,7 +131,7 @@ CREATE POLICY "Allow authenticated to manage driver_vehicles"
         EXISTS (
             SELECT 1 FROM profiles
             WHERE id = auth.uid()
-            AND role IN ('admin', 'manager', 'master')
+            AND role IN ('admin', 'manager')
         )
     );
 
@@ -150,7 +150,7 @@ CREATE POLICY "Allow authenticated to manage customer_order_links"
         EXISTS (
             SELECT 1 FROM profiles
             WHERE id = auth.uid()
-            AND role IN ('admin', 'manager', 'master')
+            AND role IN ('admin', 'manager')
         )
     );
 

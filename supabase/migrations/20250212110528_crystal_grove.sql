@@ -45,7 +45,7 @@ CREATE POLICY "Enable customer write access"
       WHERE id = auth.uid()
       AND (
         email = 'tsilicani@gmail.com' OR
-        raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+        raw_user_meta_data->>'role' IN ('admin', 'manager')
       )
     )
   );

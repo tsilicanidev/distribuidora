@@ -125,7 +125,7 @@ CREATE POLICY "sales_orders_write"
       WHERE id = auth.uid()
       AND (
         email = 'tsilicani@gmail.com' OR
-        raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+        raw_user_meta_data->>'role' IN ('admin', 'manager')
       )
     )
   );
@@ -150,7 +150,7 @@ CREATE POLICY "sales_order_items_write"
           WHERE id = auth.uid()
           AND (
             email = 'tsilicani@gmail.com' OR
-            raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+            raw_user_meta_data->>'role' IN ('admin', 'manager')
           )
         )
       )
@@ -172,7 +172,7 @@ CREATE POLICY "delivery_routes_write"
       WHERE id = auth.uid()
       AND (
         email = 'tsilicani@gmail.com' OR
-        raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+        raw_user_meta_data->>'role' IN ('admin', 'manager')
       )
     )
   );
@@ -232,7 +232,7 @@ CREATE POLICY "fiscal_invoices_write"
       WHERE id = auth.uid()
       AND (
         email = 'tsilicani@gmail.com' OR
-        raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+        raw_user_meta_data->>'role' IN ('admin', 'manager')
       )
     )
   );

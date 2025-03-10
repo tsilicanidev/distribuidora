@@ -102,7 +102,7 @@ CREATE POLICY "Staff can manage customers"
   FOR ALL
   TO authenticated
   USING (
-    auth.jwt() ->> 'role' IN ('admin', 'manager', 'master')
+    auth.jwt() ->> 'role' IN ('admin', 'manager')
   );
 
 -- Update policies for sales_orders
@@ -122,7 +122,7 @@ CREATE POLICY "Sellers can manage own orders"
   TO authenticated
   USING (
     seller_id = auth.uid() OR
-    auth.jwt() ->> 'role' IN ('admin', 'manager', 'master')
+    auth.jwt() ->> 'role' IN ('admin', 'manager')
   );
 
 -- Update policies for sales_order_items
@@ -144,7 +144,7 @@ CREATE POLICY "Staff can manage order items"
       SELECT 1 FROM sales_orders
       WHERE id = sales_order_id AND (
         seller_id = auth.uid() OR
-        auth.jwt() ->> 'role' IN ('admin', 'manager', 'master')
+        auth.jwt() ->> 'role' IN ('admin', 'manager')
       )
     )
   );

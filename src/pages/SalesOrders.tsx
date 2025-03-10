@@ -254,7 +254,7 @@ export function SalesOrders() {
   const [showModal, setShowModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const { isManager, isAdmin, isMaster } = useRole();
+  const { isManager, isAdmin } = useRole();
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -649,7 +649,7 @@ export function SalesOrders() {
                     <FileText className="h-5 w-5" />
                   </button>
 
-                  {(isManager || isAdmin || isMaster) && order.status === 'pending' && (
+                  {(isManager || isAdmin) && order.status === 'pending' && (
                     <>
                       <button
                         onClick={() => handleApproveOrder(order)}
@@ -668,7 +668,7 @@ export function SalesOrders() {
                     </>
                   )}
 
-                  {(isManager || isAdmin || isMaster) && order.status === 'approved' && (
+                  {(isManager || isAdmin) && order.status === 'approved' && (
                     <button
                       onClick={() => handleInvoiceOrder(order)}
                       disabled={processing}
@@ -679,7 +679,7 @@ export function SalesOrders() {
                     </button>
                   )}
 
-                  {(isManager || isAdmin || isMaster) && order.status === 'pending' && (
+                  {(isManager || isAdmin) && order.status === 'pending' && (
                     <button
                       onClick={() => handleCancelOrder(order)}
                       className="text-red-600 hover:text-red-900"

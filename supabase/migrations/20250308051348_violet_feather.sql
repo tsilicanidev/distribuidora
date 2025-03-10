@@ -110,14 +110,14 @@ DO $$ BEGIN
       EXISTS (
         SELECT 1 FROM public.profiles
         WHERE profiles.id = auth.uid()
-        AND profiles.role IN ('admin', 'manager', 'master')
+        AND profiles.role IN ('admin', 'manager')
       )
     )
     WITH CHECK (
       EXISTS (
         SELECT 1 FROM public.profiles
         WHERE profiles.id = auth.uid()
-        AND profiles.role IN ('admin', 'manager', 'master')
+        AND profiles.role IN ('admin', 'manager')
       )
     );
   END IF;

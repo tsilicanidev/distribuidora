@@ -73,7 +73,6 @@ export function useRole() {
     loading, 
     isAdmin: role === 'admin',
     isManager: role === 'manager',
-    isMaster: role === 'master',
     isSeller: role === 'seller',
     isDriver: role === 'driver',
     isWarehouse: role === 'warehouse'

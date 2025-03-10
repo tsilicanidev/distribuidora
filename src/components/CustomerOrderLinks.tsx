@@ -51,7 +51,7 @@ export default function CustomerOrderLinks() {
         .eq('id', user.id)
         .single();
 
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'manager' && profile.role !== 'master')) {
+     if (!profile || (profile.role !== 'admin' && profile.role !== 'manager' && profile.role !== 'master')) {
         throw new Error('Permissão negada');
       }
 

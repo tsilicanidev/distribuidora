@@ -20,21 +20,20 @@ export function usePermissions(): Permissions {
 
   const isAdmin = role === 'admin';
   const isManager = role === 'manager';
-  const isMaster = role === 'master';
   const isWarehouse = role === 'warehouse';
 
   return {
-    canCreateProduct: isAdmin || isManager || isMaster,
-    canEditProduct: isAdmin || isManager || isMaster,
-    canDeleteProduct: isAdmin || isMaster,
-    canManageUsers: isAdmin || isMaster,
-    canManageVehicles: isAdmin || isManager || isMaster,
-    canManageDrivers: isAdmin || isManager || isMaster,
-    canViewReports: isAdmin || isManager || isMaster,
-    canApproveOrders: isAdmin || isManager || isMaster,
-    canManageCustomers: isAdmin || isManager || isMaster,
-    canManageDeliveries: isAdmin || isManager || isWarehouse || isMaster,
-    canManageInvoices: isAdmin || isManager || isMaster,
-    canManageStock: isAdmin || isManager || isWarehouse || isMaster,
+    canCreateProduct: isAdmin || isManager,
+    canEditProduct: isAdmin || isManager,
+    canDeleteProduct: isAdmin,
+    canManageUsers: isAdmin,
+    canManageVehicles: isAdmin || isManager,
+    canManageDrivers: isAdmin || isManager,
+    canViewReports: isAdmin || isManager,
+    canApproveOrders: isAdmin || isManager,
+    canManageCustomers: isAdmin || isManager,
+    canManageDeliveries: isAdmin || isManager || isWarehouse,
+    canManageInvoices: isAdmin || isManager,
+    canManageStock: isAdmin || isManager || isWarehouse,
   };
 }

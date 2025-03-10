@@ -17,7 +17,7 @@ CREATE POLICY "customers_write"
     auth.uid() IN (
       SELECT id FROM auth.users
       WHERE email = 'tsilicani@gmail.com'
-      OR raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+      OR raw_user_meta_data->>'role' IN ('admin', 'manager')
     )
   );
 

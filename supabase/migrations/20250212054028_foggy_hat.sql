@@ -50,7 +50,7 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS profiles (
   id uuid PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   full_name text,
-  role text CHECK (role IN ('admin', 'manager', 'master', 'seller', 'warehouse', 'driver')),
+  role text CHECK (role IN ('admin', 'manager', 'seller', 'warehouse', 'driver')),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -142,7 +142,7 @@ CREATE POLICY "Staff can manage products"
   USING (
     EXISTS (
       SELECT 1 FROM auth.users
-      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager')
     )
   );
 
@@ -160,7 +160,7 @@ CREATE POLICY "Staff can manage customers"
   USING (
     EXISTS (
       SELECT 1 FROM auth.users
-      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager')
     )
   );
 
@@ -185,7 +185,7 @@ CREATE POLICY "Users can view relevant orders"
     auth.uid() = seller_id OR
     EXISTS (
       SELECT 1 FROM auth.users
-      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager')
     )
   );
 
@@ -196,7 +196,7 @@ CREATE POLICY "Staff can update orders"
   USING (
     EXISTS (
       SELECT 1 FROM auth.users
-      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+      WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager')
     )
   );
 
@@ -223,7 +223,7 @@ CREATE POLICY "Users can view relevant order items"
         seller_id = auth.uid() OR
         EXISTS (
           SELECT 1 FROM auth.users
-          WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager', 'master')
+          WHERE auth.uid() = id AND raw_user_meta_data->>'role' IN ('admin', 'manager')
         )
       )
     )

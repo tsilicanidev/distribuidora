@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, UserPlus, X, Save } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, UserPlus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -9,13 +9,6 @@ interface User {
   full_name: string;
   role: string;
   created_at: string;
-}
-
-interface CommissionRate {
-  id: string;
-  role: string;
-  rate: number;
-  description: string;
 }
 
 export function Settings() {
@@ -32,65 +25,12 @@ export function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'commission'>('users');
-  const [commissionRate, setCommissionRate] = useState<CommissionRate | null>(null);
-  const [editingCommission, setEditingCommission] = useState(false);
-  const [loadingCommission, setLoadingCommission] = useState(false);
 
   useEffect(() => {
     if (isAdmin) {
       fetchUsers();
-      fetchCommissionRate();
     }
   }, [isAdmin]);
-
-  async function fetchCommissionRate() {
-    try {
-      setLoadingCommission(true);
-      const { data, error } = await supabase
-        .from('commission_rates')
-        .select('*')
-        .eq('role', 'seller')
-        .maybeSingle();
-
-      if (error) throw error;
-      setCommissionRate(data);
-    } catch (error) {
-      console.error('Error fetching commission rate:', error);
-      setError('Erro ao carregar taxa de comissão');
-    } finally {
-      setLoadingCommission(false);
-    }
-  }
-
-  async function updateCommissionRate(newRate: number) {
-    if (!commissionRate) return;
-
-    try {
-      setSaving(true);
-      const { error } = await supabase
-        .from('commission_rates')
-        .update({ 
-          rate: newRate,
-          updated_at: new Date().toISOString()
-        })
-        .eq('role', 'seller');
-
-      if (error) throw error;
-
-      setCommissionRate({
-        ...commissionRate,
-        rate: newRate
-      });
-      setEditingCommission(false);
-      setError(null);
-    } catch (error) {
-      console.error('Error updating commission rate:', error);
-      setError('Erro ao atualizar taxa de comissão');
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function fetchUsers() {
     try {
@@ -279,24 +219,9 @@ export function Settings() {
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px">
             <button
-              onClick={() => setActiveTab('users')}
-              className={`py-4 px-6 text-sm font-medium border-b-2 ${
-                activeTab === 'users'
-                  ? 'border-[#FF8A00] text-[#FF8A00]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className="py-4 px-6 text-sm font-medium border-b-2 border-[#FF8A00] text-[#FF8A00]"
             >
               Usuários
-            </button>
-            <button
-              onClick={() => setActiveTab('commission')}
-              className={`py-4 px-6 text-sm font-medium border-b-2 ${
-                activeTab === 'commission'
-                  ? 'border-[#FF8A00] text-[#FF8A00]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Comissões
             </button>
           </nav>
         </div>
@@ -308,169 +233,88 @@ export function Settings() {
             </div>
           )}
 
-          {activeTab === 'users' ? (
-            <>
-              <div className="flex justify-between items-center mb-6">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar usuários..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="flex items-center px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90 ml-4"
-                >
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Novo Usuário
-                </button>
-              </div>
+          <div className="flex justify-between items-center mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar usuários..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+              />
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90 ml-4"
+            >
+              <UserPlus className="h-5 w-5 mr-2" />
+              Novo Usuário
+            </button>
+          </div>
 
-              {loading ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8A00]"></div>
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Nome
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Função
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Data de Cadastro
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.full_name}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">
-                              {user.email}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
-                              {getRoleLabel(user.role)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(user.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {user.role !== 'admin' && (
-                              <button
-                                className="text-red-600 hover:text-red-900"
-                                onClick={() => handleDelete(user.id)}
-                                title="Excluir"
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8A00]"></div>
+            </div>
           ) : (
-            <div className="bg-white rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Taxa de Comissão para Vendedores
-              </h2>
-              
-              <div className="bg-gray-50 p-6 rounded-lg">
-                {loadingCommission ? (
-                  <div className="flex justify-center items-center h-24">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8A00]"></div>
-                  </div>
-                ) : editingCommission ? (
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={commissionRate?.rate || 0}
-                      onChange={(e) => setCommissionRate(prev => prev ? {
-                        ...prev,
-                        rate: parseFloat(e.target.value)
-                      } : null)}
-                      className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                    />
-                    <span className="text-gray-600">%</span>
-                    <button
-                      onClick={() => {
-                        if (commissionRate) {
-                          updateCommissionRate(commissionRate.rate);
-                        }
-                      }}
-                      disabled={saving}
-                      className="flex items-center px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90 disabled:opacity-50"
-                    >
-                      {saving ? (
-                        'Salvando...'
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4 mr-2" />
-                          Salvar
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingCommission(false);
-                        fetchCommissionRate(); // Reset to original value
-                      }}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Taxa Atual</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {commissionRate?.rate || 0}%
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setEditingCommission(true)}
-                      className="flex items-center px-4 py-2 text-[#FF8A00] border border-[#FF8A00] rounded-lg hover:bg-[#FF8A00]/10"
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Editar
-                    </button>
-                  </div>
-                )}
-                
-                <p className="mt-4 text-sm text-gray-500">
-                  Esta taxa será aplicada automaticamente a todas as vendas realizadas pelos vendedores.
-                </p>
-              </div>
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nome
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Função
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Data de Cadastro
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ações
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {user.full_name}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">
+                          {user.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
+                          {getRoleLabel(user.role)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {user.role !== 'admin' && (
+                          <button
+                            className="text-red-600 hover:text-red-900"
+                            onClick={() => handleDelete(user.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
