@@ -38,7 +38,6 @@ export function CustomerOrder() {
   const [error, setError] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [orderComplete, setOrderComplete] = useState(false);
   const [items, setItems] = useState<OrderItem[]>([{
     product_id: '',
     quantity: 1,
@@ -73,7 +72,6 @@ export function CustomerOrder() {
       if (!validation.valid || !validation.orderLink) {
         throw new Error(validation.error || 'Token inválido');
       }
-      
 
       // Get customer data
       const { data: customerData, error: customerError } = await supabase
@@ -102,9 +100,6 @@ export function CustomerOrder() {
       const err = error instanceof Error ? error : new Error('Erro desconhecido');
       await logError(err, { token, action: 'validateTokenAndFetchData' });
       setError(err.message);
-      if (err.message.includes('Token inválido')) {
-        navigate('/token');
-      }
     } finally {
       setLoading(false);
     }
@@ -153,9 +148,6 @@ export function CustomerOrder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer || !token) return;
-
-    console.log('Iniciando envio do pedido...');
-    console.log('Token:', token);
     
     setSaving(true);
     setError(null);
@@ -163,12 +155,9 @@ export function CustomerOrder() {
     try {
       // Validate token again before submitting
       const validation = await validateToken(token);
-      console.log('Resultado da validação do token:', validation);
       if (!validation.valid || !validation.orderLink) {
         throw new Error(validation.error || 'Token inválido');
       }
-
-      console.log('Token válido. Criando pedido...');
 
       // Validate items
       if (!items.length || items.some(item => !item.product_id || item.quantity <= 0)) {
@@ -279,20 +268,6 @@ export function CustomerOrder() {
     );
   }
 
-  if (orderComplete) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-          <div className="text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Pedido Enviado!</h2>
-            <p className="text-gray-600">Seu pedido foi recebido com sucesso e será processado em breve.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -302,10 +277,10 @@ export function CustomerOrder() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Erro</h2>
             <p className="text-gray-600">{error}</p>
             <button
-              onClick={() => navigate('/token')}
+              onClick={() => window.location.reload()}
               className="mt-6 px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90"
             >
-              Voltar
+              Tentar Novamente
             </button>
           </div>
         </div>
@@ -320,15 +295,13 @@ export function CustomerOrder() {
           <div className="text-center">
             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Pedido Enviado!</h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-6">
               Seu pedido foi recebido com sucesso e será processado em breve.
+              Você receberá atualizações sobre o status do seu pedido.
             </p>
-            <button
-              onClick={() => navigate('/token')}
-              className="mt-6 px-4 py-2 bg-[#FF8A00] text-white rounded-lg hover:bg-[#FF8A00]/90"
-            >
-              Fazer Novo Pedido
-            </button>
+            <div className="text-sm text-gray-500">
+              Número do Pedido: <span className="font-medium">{items[0]?.product_id}</span>
+            </div>
           </div>
         </div>
       </div>
