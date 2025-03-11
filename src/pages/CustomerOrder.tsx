@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Plus, Minus, Save, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { validateToken } from '../utils/token';
 import { logError } from '../utils/errorLogging';
@@ -11,7 +10,6 @@ interface Product {
   name: string;
   price: number;
   stock_quantity: number;
-  category: string;
 }
 
 interface OrderItem {
@@ -47,13 +45,6 @@ export function CustomerOrder() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
-  const navigate = useNavigate();
-
-  // Create service role client
-  const serviceClient = createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_SERVICE_KEY
-  );
 
   useEffect(() => {
     validateTokenAndFetchData();
@@ -178,15 +169,14 @@ export function CustomerOrder() {
       // Calculate total amount
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // Create sales order using service role client
-      const { data: order, error: orderError } = await serviceClient
+      // Create sales order
+      const { data: order, error: orderError } = await supabase
         .from('sales_orders')
         .insert([{
           customer_id: customer.id,
-          seller_id: null, // No seller for customer orders
           status: 'pending',
           total_amount: totalAmount,
-          commission_amount: 0, // No commission for customer orders
+          commission_amount: 0,
           notes: notes || null,
           created_at: new Date().toISOString()
         }])
@@ -196,7 +186,7 @@ export function CustomerOrder() {
       if (orderError) throw orderError;
 
       // Create sales order items
-      const { error: itemsError } = await serviceClient
+      const { error: itemsError } = await supabase
         .from('sales_order_items')
         .insert(
           items.map(item => ({
@@ -212,7 +202,7 @@ export function CustomerOrder() {
 
       // Update product stock quantities
       for (const item of items) {
-        const { error: stockError } = await serviceClient
+        const { error: stockError } = await supabase
           .from('products')
           .update({
             stock_quantity: supabase.sql`stock_quantity - ${item.quantity}`
@@ -222,21 +212,20 @@ export function CustomerOrder() {
         if (stockError) throw stockError;
 
         // Record stock movement
-        const { error: movementError } = await serviceClient
+        const { error: movementError } = await supabase
           .from('stock_movements')
           .insert([{
             product_id: item.product_id,
             quantity: item.quantity,
             type: 'OUT',
-            reference_id: order.id,
-            created_by: null // System generated movement
+            reference_id: order.id
           }]);
 
         if (movementError) throw movementError;
       }
 
       // Deactivate the order link
-      const { error: linkError } = await serviceClient
+      const { error: linkError } = await supabase
         .from('customer_order_links')
         .update({ active: false })
         .eq('id', validation.orderLink.id);
