@@ -151,6 +151,9 @@ export function CustomerOrder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer || !token) return;
+
+    console.log('Iniciando envio do pedido...');
+    console.log('Token:', token);
     
     setSaving(true);
     setError(null);
@@ -158,9 +161,12 @@ export function CustomerOrder() {
     try {
       // Validate token again before submitting
       const validation = await validateToken(token);
+      console.log('Resultado da validação do token:', validation);
       if (!validation.valid || !validation.orderLink) {
         throw new Error(validation.error || 'Token inválido');
       }
+
+      console.log('Token válido. Criando pedido...');
 
       // Validate items
       if (!items.length || items.some(item => !item.product_id || item.quantity <= 0)) {
