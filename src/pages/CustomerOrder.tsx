@@ -177,10 +177,18 @@ export function CustomerOrder() {
       // Calculate total amount
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
+          // 🔍 Adicionando log antes da inserção
+    console.log('Verificando dados antes da inserção:', {
+      customer,
+      orderLink,
+      totalAmount,
+      notes
+    });
+
       // Create customer order
       const { data: order, error: orderError } = await supabase
         .from('customer_orders')
-        .insert([{
+          .insert([{
           customer_id: customer.id,
           order_link_id: orderLink.id,
           status: 'pending',
