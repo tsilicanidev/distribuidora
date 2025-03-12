@@ -45,8 +45,14 @@ export function CustomerOrder() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [orderLink, setOrderLink] = useState<any>(null);
 
   useEffect(() => {
+    if (!token) {
+      setError('Token inválido ou não fornecido');
+      setLoading(false);
+      return;
+    }
     validateTokenAndFetchData();
   }, [token]);
 
@@ -63,6 +69,8 @@ export function CustomerOrder() {
       if (!validation.valid || !validation.orderLink) {
         throw new Error(validation.error || 'Token inválido');
       }
+
+      setOrderLink(validation.orderLink);
 
       // Get customer data
       const { data: customerData, error: customerError } = await supabase
@@ -138,7 +146,7 @@ export function CustomerOrder() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customer || !token) return;
+    if (!customer || !token || !orderLink) return;
     
     setSaving(true);
     setError(null);
@@ -169,28 +177,27 @@ export function CustomerOrder() {
       // Calculate total amount
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
-      // Create sales order
+      // Create customer order
       const { data: order, error: orderError } = await supabase
-        .from('sales_orders')
+        .from('customer_orders')
         .insert([{
           customer_id: customer.id,
+          order_link_id: orderLink.id,
           status: 'pending',
           total_amount: totalAmount,
-          commission_amount: 0,
           notes: notes || null,
-          created_at: new Date().toISOString()
         }])
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // Create sales order items
+      // Create order items
       const { error: itemsError } = await supabase
-        .from('sales_order_items')
+        .from('customer_order_items')
         .insert(
           items.map(item => ({
-            sales_order_id: order.id,
+            order_id: order.id,
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
@@ -210,25 +217,13 @@ export function CustomerOrder() {
           .eq('id', item.product_id);
 
         if (stockError) throw stockError;
-
-        // Record stock movement
-        const { error: movementError } = await supabase
-          .from('stock_movements')
-          .insert([{
-            product_id: item.product_id,
-            quantity: item.quantity,
-            type: 'OUT',
-            reference_id: order.id
-          }]);
-
-        if (movementError) throw movementError;
       }
 
       // Deactivate the order link
       const { error: linkError } = await supabase
         .from('customer_order_links')
         .update({ active: false })
-        .eq('id', validation.orderLink.id);
+        .eq('id', orderLink.id);
 
       if (linkError) {
         console.error('Error deactivating order link:', linkError);
@@ -288,9 +283,6 @@ export function CustomerOrder() {
               Seu pedido foi recebido com sucesso e será processado em breve.
               Você receberá atualizações sobre o status do seu pedido.
             </p>
-            <div className="text-sm text-gray-500">
-              Número do Pedido: <span className="font-medium">{items[0]?.product_id}</span>
-            </div>
           </div>
         </div>
       </div>

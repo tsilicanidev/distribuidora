@@ -15,7 +15,7 @@ export function isValidTokenFormat(token: string): boolean {
 export function parseTokenFromUrl(): string | null {
   const pathParts = window.location.pathname.split('/');
   const token = pathParts[pathParts.length - 1];
-  return token || null;
+  return token && isValidTokenFormat(token) ? token : null;
 }
 
 // Create a new order link
@@ -83,7 +83,7 @@ export async function validateToken(token: string): Promise<{
   };
 }> {
   try {
-    if (!isValidTokenFormat(token)) {
+    if (!token || !isValidTokenFormat(token)) {
       return { valid: false, error: 'Formato de token inválido' };
     }
 
@@ -111,10 +111,12 @@ export async function validateToken(token: string): Promise<{
       .maybeSingle();
 
     if (linkError) {
+      console.error('Database error during token validation:', linkError);
       return { valid: false, error: 'Erro ao validar token' };
     }
 
     if (!linkData) {
+      console.error('Token not found:', token);
       return { valid: false, error: 'Token não encontrado' };
     }
 
