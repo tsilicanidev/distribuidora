@@ -187,16 +187,16 @@ export function CustomerOrder() {
 
       // Create customer order
       const { data: order, error: orderError } = await supabase
-        .from('customer_orders')
-          .insert([{
-          customer_id: customer.id,
-          order_link_id: orderLink.id,
-          status: 'pending',
-          total_amount: totalAmount,
-          notes: notes || null,
-        }])
-        .select()
-        .single();
+      .from('customer_orders')
+      .insert([{
+        customer_id: customer.id,
+        order_link_id: orderLink.id,
+        status: 'pending',
+        total_amount: totalAmount,
+        notes: notes || '',
+      }])
+      .select("*")  // Garante que selecionamos todas as colunas
+      .single();
 
       if (orderError) throw orderError;
 
