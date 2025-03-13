@@ -224,15 +224,15 @@ export function CustomerOrder() {
       if (itemsError) throw itemsError;
 
       // Update product stock quantities
-      for (const item of items) {
-        const { error: stockError } = await supabase
-          .rpc('decrement_stock', { product_id: item.product_id, quantity: item.quantity });
-      
-        if (stockError) {
-          console.error("🔴 Erro ao atualizar estoque:", stockError);
-          throw stockError;
-        }
-      }
+for (const item of items) {
+  const { error: stockError } = await supabase
+    .rpc('decrement_stock', { product_id: item.product_id, quantity: item.quantity });
+
+  if (stockError) {
+    console.error("🔴 Erro ao atualizar estoque:", stockError);
+    throw stockError;
+  }
+}
 
       // Deactivate the order link
       const { error: linkError } = await supabase
