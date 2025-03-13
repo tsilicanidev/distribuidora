@@ -185,12 +185,17 @@ export function CustomerOrder() {
       notes
     });
 
+    if (!order || !items.length) {
+      console.error("🔴 Erro: Order não definido ou itens vazios.");
+      return;
+    }
+    
     const { data: existingItem } = await supabase
-    .from('customer_order_items')
-    .select('id')
-    .eq('order_id', order.id)
-    .eq('product_id', item.product_id)
-    .maybeSingle();
+      .from('customer_order_items')
+      .select('id')
+      .eq('order_id', order.id)
+      .eq('product_id', items[0].product_id) // Use um item válido
+      .maybeSingle();
   
   if (existingItem) {
     console.error("🔴 Erro: O item já existe no pedido.");
