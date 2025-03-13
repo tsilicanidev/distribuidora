@@ -96,7 +96,7 @@ export function CustomerOrder() {
       setProducts(productsData || []);
       setError(null);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error('Erro desconhecido');
+      const err = error instanceof Error ? error : new Error('Erro desconhecido (Produto)');
       await logError(err, { token, action: 'validateTokenAndFetchData' });
       setError(err.message);
     } finally {
@@ -185,18 +185,26 @@ export function CustomerOrder() {
       notes
     });
 
+    const orderNumber = `ORDER-${Date.now()}`;
+
       // Create customer order
       const { data: order, error: orderError } = await supabase
       .from('customer_orders')
       .insert([{
+        number: orderNumber, // Adicionando o campo obrigatório
         customer_id: customer.id,
         order_link_id: orderLink.id,
         status: 'pending',
         total_amount: totalAmount,
         notes: notes || '',
       }])
-      .select("*")  // Garante que selecionamos todas as colunas
+      .select()
       .single();
+
+      if (orderError) {
+        console.error("🔴 Erro do Supabase:", orderError);
+        throw new Error(orderError.message || "Erro desconhecido no Supabase");
+      }
 
       if (orderError) throw orderError;
 
