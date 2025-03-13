@@ -86,6 +86,10 @@ export function CustomerOrder() {
     }
   }
 
+  const addItem = () => {
+    setItems([...items, { product_id: '', quantity: 1, unit_price: 0, total_price: 0 }]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer || !orderLink) return;
@@ -116,7 +120,7 @@ export function CustomerOrder() {
 
         if (existingItem) {
           console.error('🔴 Erro: O item já existe no pedido.');
-          continue; // Pula a inserção do item duplicado
+          continue;
         }
 
         const { error: itemsError } = await supabase.from('customer_order_items').insert([{ id: uuidv4(), order_id: order.id, product_id: item.product_id, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price }]);
