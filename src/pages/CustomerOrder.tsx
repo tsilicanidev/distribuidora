@@ -191,9 +191,9 @@ export function CustomerOrder() {
       const { data: order, error: orderError } = await supabase
       .from('sales_orders')
       .insert([{
-        number: orderNumber, // Adicionando o campo obrigatório
         customer_id: customer.id,
         order_link_id: orderLink.id,
+        seller_id: 'ID_DO_VENDEDOR_AQUI',  // 🚀 Substitua pelo ID real do vendedor
         status: 'pending',
         total_amount: totalAmount,
         notes: notes || '',
@@ -210,16 +210,17 @@ export function CustomerOrder() {
 
       // Create order items
       const { error: itemsError } = await supabase
-        .from('customer_order_items')
-        .insert(
-          items.map(item => ({
-            order_id: order.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price
-          }))
-        );
+      .from('customer_order_items')
+      .insert(
+        items.map(item => ({
+          order_id: order.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price
+        })),
+        { headers: { apikey: process.env.SUPABASE_ANON_KEY } } // 🔥 Adicionando chave da API
+      );
 
       if (itemsError) throw itemsError;
 
