@@ -185,30 +185,13 @@ export function CustomerOrder() {
       notes
     });
 
-    if (!order || !items.length) {
-      console.error("🔴 Erro: Order não definido ou itens vazios.");
-      return;
-    }
-    
-    const { data: existingItem } = await supabase
-      .from('customer_order_items')
-      .select('id')
-      .eq('order_id', order.id)
-      .eq('product_id', items[0].product_id) // Use um item válido
-      .maybeSingle();
-  
-  if (existingItem) {
-    console.error("🔴 Erro: O item já existe no pedido.");
-    return;
-  }
-
     const orderNumber = `ORDER-${Date.now()}`;
 
       // Create customer order
       const { data: order, error: orderError } = await supabase
       .from('sales_orders')
       .insert([{
-        number: orderNumber,  // ✅ Garante que será único
+        number: orderNumber, // Adicionando o campo obrigatório
         customer_id: customer.id,
         order_link_id: orderLink.id,
         status: 'pending',
@@ -217,7 +200,7 @@ export function CustomerOrder() {
       }])
       .select()
       .single();
-      
+
       if (orderError) {
         console.error("🔴 Erro do Supabase:", orderError);
         throw new Error(orderError.message || "Erro desconhecido no Supabase");
@@ -227,17 +210,16 @@ export function CustomerOrder() {
 
       // Create order items
       const { error: itemsError } = await supabase
-      .from('customer_order_items')
-      .insert(
-        items.map(item => ({
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price
-        })),
-        { headers: { apikey: process.env.SUPABASE_ANON_KEY } } // 🔥 Adicionando chave da API
-      );
+        .from('customer_order_items')
+        .insert(
+          items.map(item => ({
+            order_id: order.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price
+          }))
+        );
 
       if (itemsError) throw itemsError;
 
