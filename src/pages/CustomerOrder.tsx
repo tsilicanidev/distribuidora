@@ -193,14 +193,14 @@ export function CustomerOrder() {
       .insert([{
         customer_id: customer.id,
         order_link_id: orderLink.id,
-        seller_id: 'ID_DO_VENDEDOR_AQUI',  // 🚀 Substitua pelo ID real do vendedor
+        seller_id: sellerId, // ✅ Agora um UUID válido será enviado
         status: 'pending',
         total_amount: totalAmount,
         notes: notes || '',
       }])
       .select()
       .single();
-
+      
       if (orderError) {
         console.error("🔴 Erro do Supabase:", orderError);
         throw new Error(orderError.message || "Erro desconhecido no Supabase");
