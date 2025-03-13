@@ -4,6 +4,7 @@ import { Plus, Minus, Save, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { validateToken } from '../utils/token';
 import { logError } from '../utils/errorLogging';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Product {
   id: string;
@@ -36,12 +37,7 @@ export function CustomerOrder() {
   const [error, setError] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [items, setItems] = useState<OrderItem[]>([{
-    product_id: '',
-    quantity: 1,
-    unit_price: 0,
-    total_price: 0,
-  }]);
+  const [items, setItems] = useState<OrderItem[]>([{ product_id: '', quantity: 1, unit_price: 0, total_price: 0 }]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -57,34 +53,22 @@ export function CustomerOrder() {
   }, [token]);
 
   async function validateTokenAndFetchData() {
-    if (!token) {
-      setError('Token inválido ou não fornecido');
-      setLoading(false);
-      return;
-    }
-
     try {
-      // Validate token
       const validation = await validateToken(token);
       if (!validation.valid || !validation.orderLink) {
         throw new Error(validation.error || 'Token inválido');
       }
 
       setOrderLink(validation.orderLink);
-
-      // Get customer data
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
         .select('*')
         .eq('id', validation.customerId)
         .single();
 
-      if (customerError) throw new Error('Erro ao buscar dados do cliente');
-      if (!customerData) throw new Error('Cliente não encontrado');
-
+      if (customerError || !customerData) throw new Error('Erro ao buscar cliente');
       setCustomer(customerData);
 
-      // Get available products with stock
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
@@ -92,168 +76,66 @@ export function CustomerOrder() {
         .order('name');
 
       if (productsError) throw new Error('Erro ao carregar produtos');
-
       setProducts(productsData || []);
       setError(null);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error('Erro desconhecido (Produto)');
-      await logError(err, { token, action: 'validateTokenAndFetchData' });
-      setError(err.message);
+      await logError(error as Error, { token, action: 'validateTokenAndFetchData' });
+      setError((error as Error).message);
     } finally {
       setLoading(false);
     }
   }
 
-  const addItem = () => {
-    setItems([...items, {
-      product_id: '',
-      quantity: 1,
-      unit_price: 0,
-      total_price: 0,
-    }]);
-  };
-
-  const removeItem = (index: number) => {
-    if (items.length === 1) return;
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const updateItem = (index: number, field: keyof OrderItem, value: any) => {
-    const newItems = [...items];
-    const currentItem = { ...newItems[index] };
-
-    if (field === 'product_id') {
-      const product = products.find(p => p.id === value);
-      if (product) {
-        currentItem.product_id = value;
-        currentItem.unit_price = product.price;
-        currentItem.total_price = product.price * currentItem.quantity;
-      }
-    } else if (field === 'quantity') {
-      const quantity = parseInt(value) || 0;
-      if (quantity > 0) {
-        const product = products.find(p => p.id === currentItem.product_id);
-        if (product && quantity <= product.stock_quantity) {
-          currentItem.quantity = quantity;
-          currentItem.total_price = currentItem.unit_price * quantity;
-        }
-      }
-    }
-
-    newItems[index] = currentItem;
-    setItems(newItems);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customer || !token || !orderLink) return;
-    
+    if (!customer || !orderLink) return;
+
     setSaving(true);
     setError(null);
 
     try {
-      // Validate token again before submitting
-      const validation = await validateToken(token);
-      if (!validation.valid || !validation.orderLink) {
-        throw new Error(validation.error || 'Token inválido');
-      }
-
-      // Validate items
-      if (!items.length || items.some(item => !item.product_id || item.quantity <= 0)) {
-        throw new Error('Por favor, adicione pelo menos um produto ao pedido');
-      }
-
-      // Check stock availability
-      for (const item of items) {
-        const product = products.find(p => p.id === item.product_id);
-        if (!product) {
-          throw new Error('Produto não encontrado');
-        }
-        if (item.quantity > product.stock_quantity) {
-          throw new Error(`Quantidade insuficiente em estoque para o produto ${product.name}`);
-        }
-      }
-
-      // Calculate total amount
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
+      console.log('Verificando dados antes da inserção:', { customer, orderLink, totalAmount, notes });
 
-          // 🔍 Adicionando log antes da inserção
-    console.log('Verificando dados antes da inserção:', {
-      customer,
-      orderLink,
-      totalAmount,
-      notes
-    });
-
-    const orderNumber = `ORDER-${Date.now()}`;
-
-      // Create customer order
+      const orderNumber = `ORDER-${Date.now()}`;
       const { data: order, error: orderError } = await supabase
-      .from('sales_orders')
-      .insert([{
-        number: orderNumber, // Adicionando o campo obrigatório
-        customer_id: customer.id,
-        order_link_id: orderLink.id,
-        status: 'pending',
-        total_amount: totalAmount,
-        notes: notes || '',
-      }])
-      .select()
-      .single();
+        .from('sales_orders')
+        .insert([{ number: orderNumber, customer_id: customer.id, order_link_id: orderLink.id, status: 'pending', total_amount: totalAmount, notes: notes || '' }])
+        .select()
+        .single();
 
-      if (orderError) {
-        console.error("🔴 Erro do Supabase:", orderError);
-        throw new Error(orderError.message || "Erro desconhecido no Supabase");
+      if (orderError) throw new Error(orderError.message || 'Erro ao criar pedido');
+
+      for (const item of items) {
+        const { data: existingItem } = await supabase
+          .from('customer_order_items')
+          .select('id')
+          .eq('order_id', order.id)
+          .eq('product_id', item.product_id)
+          .maybeSingle();
+
+        if (existingItem) {
+          console.error('🔴 Erro: O item já existe no pedido.');
+          continue; // Pula a inserção do item duplicado
+        }
+
+        const { error: itemsError } = await supabase.from('customer_order_items').insert([{ id: uuidv4(), order_id: order.id, product_id: item.product_id, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price }]);
+
+        if (itemsError) throw itemsError;
       }
 
-      if (orderError) throw orderError;
-
-      // Create order items
-      const { error: itemsError } = await supabase
-        .from('customer_order_items')
-        .insert(
-          items.map(item => ({
-            order_id: order.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price
-          }))
-        );
-
-      if (itemsError) throw itemsError;
-
-      // Update product stock quantities
-for (const item of items) {
-  const { error: stockError } = await supabase
-    .rpc('decrement_stock', { product_id: item.product_id, quantity: item.quantity });
-
-  if (stockError) {
-    console.error("🔴 Erro ao atualizar estoque:", stockError);
-    throw stockError;
-  }
-}
-
-      // Deactivate the order link
-      const { error: linkError } = await supabase
-        .from('customer_order_links')
-        .update({ active: false })
-        .eq('id', orderLink.id);
-
-      if (linkError) {
-        console.error('Error deactivating order link:', linkError);
+      for (const item of items) {
+        const { error: stockError } = await supabase.rpc('decrement_stock', { product_id: item.product_id, quantity: item.quantity });
+        if (stockError) throw stockError;
       }
+
+      const { error: linkError } = await supabase.from('customer_order_links').update({ active: false }).eq('id', orderLink.id);
+      if (linkError) console.error('Erro ao desativar o link do pedido:', linkError);
 
       setOrderComplete(true);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error('Erro desconhecido');
-      await logError(err, { 
-        customer_id: customer.id,
-        items,
-        action: 'createOrder',
-        token
-      });
-      setError(err.message);
+      await logError(error as Error, { customer_id: customer?.id, items, action: 'createOrder', token });
+      setError((error as Error).message);
     } finally {
       setSaving(false);
     }
