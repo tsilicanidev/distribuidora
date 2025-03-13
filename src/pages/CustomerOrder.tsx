@@ -189,7 +189,7 @@ export function CustomerOrder() {
 
       // Create customer order
       const { data: order, error: orderError } = await supabase
-      .from('customer_orders')
+      .from('sales_orders')
       .insert([{
         number: orderNumber, // Adicionando o campo obrigatório
         customer_id: customer.id,
