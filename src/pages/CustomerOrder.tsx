@@ -185,16 +185,15 @@ export function CustomerOrder() {
       notes
     });
 
-    const { data: userData } = await supabase.auth.getUser();
-    const sellerId = userData?.user?.id || null;
-
+    const orderNumber = `ORDER-${Date.now()}`;
+    
       // Create customer order
       const { data: order, error: orderError } = await supabase
       .from('sales_orders')
       .insert([{
+        number: orderNumber,  // ✅ Garante que será único
         customer_id: customer.id,
         order_link_id: orderLink.id,
-        ...(sellerId && { seller_id: sellerId }), // ✅ Inclui apenas se `seller_id` não for null
         status: 'pending',
         total_amount: totalAmount,
         notes: notes || '',
