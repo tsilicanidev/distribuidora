@@ -90,6 +90,32 @@ export function CustomerOrder() {
     setItems([...items, { product_id: '', quantity: 1, unit_price: 0, total_price: 0 }]);
   };
 
+  const updateItem = (index: number, field: keyof OrderItem, value: any) => {
+    const newItems = [...items];
+    const currentItem = { ...newItems[index] };
+
+    if (field === 'product_id') {
+      const product = products.find(p => p.id === value);
+      if (product) {
+        currentItem.product_id = value;
+        currentItem.unit_price = product.price;
+        currentItem.total_price = product.price * currentItem.quantity;
+      }
+    } else if (field === 'quantity') {
+      const quantity = parseInt(value) || 0;
+      if (quantity > 0) {
+        const product = products.find(p => p.id === currentItem.product_id);
+        if (product && quantity <= product.stock_quantity) {
+          currentItem.quantity = quantity;
+          currentItem.total_price = currentItem.unit_price * quantity;
+        }
+      }
+    }
+
+    newItems[index] = currentItem;
+    setItems(newItems);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer || !orderLink) return;
@@ -109,32 +135,6 @@ export function CustomerOrder() {
         .single();
 
       if (orderError) throw new Error(orderError.message || 'Erro ao criar pedido');
-
-      for (const item of items) {
-        const { data: existingItem } = await supabase
-          .from('customer_order_items')
-          .select('id')
-          .eq('order_id', order.id)
-          .eq('product_id', item.product_id)
-          .maybeSingle();
-
-        if (existingItem) {
-          console.error('🔴 Erro: O item já existe no pedido.');
-          continue;
-        }
-
-        const { error: itemsError } = await supabase.from('customer_order_items').insert([{ id: uuidv4(), order_id: order.id, product_id: item.product_id, quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price }]);
-
-        if (itemsError) throw itemsError;
-      }
-
-      for (const item of items) {
-        const { error: stockError } = await supabase.rpc('decrement_stock', { product_id: item.product_id, quantity: item.quantity });
-        if (stockError) throw stockError;
-      }
-
-      const { error: linkError } = await supabase.from('customer_order_links').update({ active: false }).eq('id', orderLink.id);
-      if (linkError) console.error('Erro ao desativar o link do pedido:', linkError);
 
       setOrderComplete(true);
     } catch (error) {
