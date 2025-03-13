@@ -185,7 +185,7 @@ export function CustomerOrder() {
       notes
     });
 
-    const orderNumber = `ORDER-${Date.now()}`;
+    const sellerId = user?.id || null;
 
       // Create customer order
       const { data: order, error: orderError } = await supabase
@@ -193,7 +193,7 @@ export function CustomerOrder() {
       .insert([{
         customer_id: customer.id,
         order_link_id: orderLink.id,
-        seller_id: sellerId, // ✅ Agora um UUID válido será enviado
+        ...(sellerId && { seller_id: sellerId }), // ✅ Apenas inclui seller_id se não for null
         status: 'pending',
         total_amount: totalAmount,
         notes: notes || '',
