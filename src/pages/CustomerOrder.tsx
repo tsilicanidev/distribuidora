@@ -226,13 +226,12 @@ export function CustomerOrder() {
       // Update product stock quantities
       for (const item of items) {
         const { error: stockError } = await supabase
-          .from('products')
-          .update({
-            stock_quantity: supabase.sql`stock_quantity - ${item.quantity}`
-          })
-          .eq('id', item.product_id);
-
-        if (stockError) throw stockError;
+          .rpc('decrement_stock', { product_id: item.product_id, quantity: item.quantity });
+      
+        if (stockError) {
+          console.error("🔴 Erro ao atualizar estoque:", stockError);
+          throw stockError;
+        }
       }
 
       // Deactivate the order link
