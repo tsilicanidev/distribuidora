@@ -185,8 +185,20 @@ export function CustomerOrder() {
       notes
     });
 
+    const { data: existingItem } = await supabase
+    .from('customer_order_items')
+    .select('id')
+    .eq('order_id', order.id)
+    .eq('product_id', item.product_id)
+    .maybeSingle();
+  
+  if (existingItem) {
+    console.error("🔴 Erro: O item já existe no pedido.");
+    return;
+  }
+
     const orderNumber = `ORDER-${Date.now()}`;
-    
+
       // Create customer order
       const { data: order, error: orderError } = await supabase
       .from('sales_orders')
