@@ -303,58 +303,22 @@ export function SalesOrders() {
       setError('Você não tem permissão para aprovar pedidos');
       return;
     }
-  
-    setProcessing(true);
-  
-    try {
-      // Atualiza o pedido para 'approved'
-      let { error } = await supabase
-        .from('sales_orders')
-        .update({ status: 'approved' })
-        .eq('id', order.id);
-  
-      if (error) throw error;
-  
-      // Depois de aprovado, passa para 'invoiced' (Faturamento)
-      let { error: invoiceError } = await supabase
-        .from('sales_orders')
-        .update({ status: 'invoiced' })
-        .eq('id', order.id);
-  
-      if (invoiceError) throw invoiceError;
-  
-      // Aguarde um pouco antes de buscar novamente os pedidos para evitar sumiço visual
-      setTimeout(fetchOrders, 500);
-    } catch (error) {
-      console.error('Erro ao aprovar e faturar pedido:', error);
-      setError('Erro ao aprovar e faturar pedido.');
-    } finally {
-      setProcessing(false);
-    }
-  };
 
-  const handleEmitirNF = async (order: SalesOrder) => {
-    if (order.status !== 'invoiced') {
-      setError('O pedido precisa estar faturado antes de emitir a NF');
-      return;
-    }
-  
     try {
       const { error } = await supabase
         .from('sales_orders')
-        .update({ status: 'nf_emitted' }) // Atualiza o status para NF Emitida
+        .update({ status: 'approved' })
         .eq('id', order.id);
-  
+
       if (error) throw error;
-  
-      alert(`Nota Fiscal emitida com sucesso para o pedido ${order.number}`);
-      fetchOrders(); // Atualiza a lista de pedidos
+      
+      setError(null);
+      fetchOrders();
     } catch (error) {
-      console.error('Erro ao emitir NF:', error);
-      setError('Erro ao emitir NF.');
+      console.error('Erro ao aprovar pedido:', error);
+      setError('Erro ao aprovar pedido. Por favor, tente novamente.');
     }
   };
-  
 
   const handleRejectOrder = async (order: SalesOrder) => {
     if (!isManager && !isAdmin) {
@@ -383,8 +347,6 @@ export function SalesOrders() {
       setError('Erro ao rejeitar pedido. Por favor, tente novamente.');
     }
   };
-
-  
 
   const handleCancelOrder = async (order: SalesOrder) => {
     if (!isManager && !isAdmin) {
@@ -523,65 +485,55 @@ export function SalesOrders() {
                   R$ {order.commission_amount.toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-  <button
-    onClick={() => {
-      setSelectedOrder(order);
-      setShowDetailsModal(true);
-    }}
-    className="text-[#FF8A00] hover:text-[#FF8A00]/80 mr-3"
-    title="Visualizar"
-  >
-    <FileText className="h-5 w-5" />
-  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setShowDetailsModal(true);
+                    }}
+                    className="text-[#FF8A00] hover:text-[#FF8A00]/80 mr-3"
+                    title="Visualizar"
+                  >
+                    <FileText className="h-5 w-5" />
+                  </button>
 
-  {(isManager || isAdmin) && order.status === 'pending' && (
-    <>
-      <button
-        onClick={() => handleApproveOrder(order)}
-        className="text-green-600 hover:text-green-900 mr-3"
-        title="Aprovar Pedido"
-      >
-        <CheckCircle className="h-5 w-5" />
-      </button>
-      <button
-        onClick={() => handleRejectOrder(order)}
-        className="text-red-600 hover:text-red-900 mr-3"
-        title="Rejeitar Pedido"
-      >
-        <XCircle className="h-5 w-5" />
-      </button>
-    </>
-  )}
+                  {(isManager || isAdmin) && order.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => handleApproveOrder(order)}
+                        className="text-green-600 hover:text-green-900 mr-3"
+                        title="Aprovar Pedido"
+                      >
+                        <CheckCircle className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleRejectOrder(order)}
+                        className="text-red-600 hover:text-red-900 mr-3"
+                        title="Rejeitar Pedido"
+                      >
+                        <XCircle className="h-5 w-5" />
+                      </button>
+                    </>
+                  )}
 
-  {(isManager || isAdmin) && order.status === 'pending' && (
-    <button
-      onClick={() => handleCancelOrder(order)}
-      className="text-red-600 hover:text-red-900"
-      title="Cancelar Pedido"
-    >
-      <Ban className="h-5 w-5" />
-    </button>
-  )}
+                  {(isManager || isAdmin) && order.status === 'pending' && (
+                    <button
+                      onClick={() => handleCancelOrder(order)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Cancelar Pedido"
+                    >
+                      <Ban className="h-5 w-5" />
+                    </button>
+                  )}
 
-  {order.status === 'pending' && (
-    <button
-      className="text-yellow-600 hover:text-yellow-900 ml-3"
-      title="Aguardando Aprovação"
-    >
-      <AlertTriangle className="h-5 w-5" />
-    </button>
-  )}
-
-  {order.status === 'invoiced' && (
-    <button
-      onClick={() => handleEmitirNF(order)}
-      className="text-blue-600 hover:text-blue-900 ml-3"
-      title="Emitir Nota Fiscal"
-    >
-      <FileCheck className="h-5 w-5" />
-    </button>
-  )}
-</td>
+                  {order.status === 'pending' && (
+                    <button
+                      className="text-yellow-600 hover:text-yellow-900 ml-3"
+                      title="Aguardando Aprovação"
+                    >
+                      <AlertTriangle className="h-5 w-5" />
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
