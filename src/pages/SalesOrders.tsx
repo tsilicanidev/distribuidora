@@ -3,6 +3,7 @@ import { Plus, Search, FileText, AlertTriangle, FileCheck, CheckCircle, XCircle,
 import { supabase } from '../lib/supabase';
 import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
+import { NFe } from '../services/nfe';
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -246,16 +247,18 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
   );
 }
 
-export function SalesOrders() {
-  const [orders, setOrders] = useState([]);
+function SalesOrders() {
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const { isManager, isAdmin } = useRole();
-  const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const nfeService = new NFe();
 
   useEffect(() => {
     fetchOrders();
@@ -298,90 +301,180 @@ export function SalesOrders() {
     }
   }
 
-  async function handleApproveOrder(order) {
+  const handleApproveOrder = async (order: SalesOrder) => {
     if (!isManager && !isAdmin) {
       setError('Você não tem permissão para aprovar pedidos');
       return;
     }
 
     setProcessing(true);
+    setError(null);
+
     try {
-      // Atualiza para "invoiced"
-      let { error } = await supabase
+      // Get order items
+      const { data: items, error: itemsError } = await supabase
+        .from('sales_order_items')
+        .select(`
+          *,
+          product:products(*)
+        `)
+        .eq('sales_order_id', order.id);
+
+      if (itemsError) throw itemsError;
+      if (!items || items.length === 0) throw new Error('Pedido sem itens');
+
+      // Update stock quantities
+      for (const item of items) {
+        // Get current stock quantity
+        const { data: product, error: productError } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', item.product_id)
+          .single();
+
+        if (productError) throw productError;
+        if (!product) throw new Error('Produto não encontrado');
+
+        // Calculate new stock quantity
+        const newQuantity = product.stock_quantity - item.quantity;
+
+        // Update stock
+        const { error: stockError } = await supabase
+          .from('products')
+          .update({ stock_quantity: newQuantity })
+          .eq('id', item.product_id);
+
+        if (stockError) throw stockError;
+
+        // Create stock movement record
+        const { error: movementError } = await supabase
+          .from('stock_movements')
+          .insert([{
+            product_id: item.product_id,
+            quantity: item.quantity,
+            type: 'OUT',
+            reference_id: order.id,
+            created_by: (await supabase.auth.getUser()).data.user?.id
+          }]);
+
+        if (movementError) throw movementError;
+      }
+
+      // Prepare NFe data
+      const nfeData = {
+        numero: order.number,
+        serie: '1',
+        natureza_operacao: 'VENDA DE MERCADORIAS',
+        tipo_documento: '1',
+        destino_operacao: '1',
+        finalidade_emissao: '1',
+        consumidor_final: '1',
+        presenca_comprador: '1',
+        data_emissao: new Date().toISOString(),
+        data_saida: new Date().toISOString(),
+        emitente: {
+          cnpj: import.meta.env.VITE_EMPRESA_CNPJ,
+          inscricao_estadual: import.meta.env.VITE_EMPRESA_IE,
+          nome: import.meta.env.VITE_EMPRESA_RAZAO_SOCIAL,
+          email: import.meta.env.VITE_EMPRESA_EMAIL,
+          endereco: {
+            logradouro: import.meta.env.VITE_EMPRESA_ENDERECO,
+            numero: import.meta.env.VITE_EMPRESA_NUMERO,
+            bairro: import.meta.env.VITE_EMPRESA_BAIRRO,
+            municipio: import.meta.env.VITE_EMPRESA_CIDADE,
+            uf: import.meta.env.VITE_EMPRESA_UF,
+            cep: import.meta.env.VITE_EMPRESA_CEP,
+            pais: 'Brasil'
+          }
+        },
+        destinatario: {
+          cpf_cnpj: order.customer.cpf_cnpj,
+          inscricao_estadual: order.customer.ie,
+          nome: order.customer.razao_social,
+          email: order.customer.email,
+          endereco: {
+            logradouro: order.customer.endereco,
+            numero: '',
+            bairro: order.customer.bairro,
+            municipio: order.customer.cidade,
+            uf: order.customer.estado,
+            cep: order.customer.cep,
+            pais: 'Brasil'
+          }
+        },
+        itens: items.map(item => ({
+          produto: {
+            codigo: item.product_id,
+            descricao: item.product.name,
+            ncm: item.product.ncm || '00000000',
+            cfop: '5102',
+            unidade: item.product.unidade || 'UN',
+            quantidade: item.quantity,
+            valor_unitario: item.unit_price,
+            valor_total: item.total_price
+          },
+          imposto: {
+            icms: {
+              origem: '0',
+              cst: '00',
+              aliquota: 18,
+              base_calculo: item.total_price,
+              valor: item.total_price * 0.18
+            }
+          }
+        })),
+        valor_frete: 0,
+        valor_seguro: 0,
+        valor_total: order.total_amount,
+        valor_produtos: order.total_amount,
+        valor_desconto: 0,
+        informacoes_complementares: order.notes || ''
+      };
+
+      // Emit NFe
+      const nfeResult = await nfeService.emitir(nfeData);
+      if (!nfeResult.success) {
+        throw new Error(nfeResult.message || 'Erro ao emitir NFe');
+      }
+
+      // Create fiscal invoice record
+      const { error: invoiceError } = await supabase
+        .from('fiscal_invoices')
+        .insert([{
+          number: nfeResult.nfe_numero,
+          series: nfeResult.nfe_serie,
+          customer_id: order.customer.id,
+          total_amount: order.total_amount,
+          tax_amount: order.total_amount * 0.18,
+          status: 'issued',
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+          xml_url: nfeResult.xml_url,
+          pdf_url: nfeResult.pdf_url
+        }]);
+
+      if (invoiceError) throw invoiceError;
+
+      // Update order status
+      const { error: updateError } = await supabase
         .from('sales_orders')
-        .update({ status: 'invoiced' })
+        .update({ status: 'approved' })
         .eq('id', order.id);
-      if (error) throw error;
 
-      // Atualiza estoque
-      await atualizarEstoque(order);
+      if (updateError) throw updateError;
 
-      // Emite NF automaticamente
-      await emitirNotaFiscal(order);
-
-      alert(`Pedido ${order.number} aprovado, faturado e NF emitida com sucesso!`);
+      setError(null);
       fetchOrders();
+
+      // Open NFe documents in new tabs
+      if (nfeResult.pdf_url) window.open(nfeResult.pdf_url, '_blank');
+      if (nfeResult.xml_url) window.open(nfeResult.xml_url, '_blank');
     } catch (error) {
-      setError('Erro ao processar pedido.');
+      console.error('Erro ao aprovar pedido:', error);
+      setError(error instanceof Error ? error.message : 'Erro ao aprovar pedido. Por favor, tente novamente.');
     } finally {
       setProcessing(false);
     }
   };
-
-  async function atualizarEstoque(order) {
-    try {
-      for (const item of order.items || []) {
-        let { data, error } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.product.id)
-          .single();
-
-        if (error || !data) throw error || new Error("Produto não encontrado");
-        const novoEstoque = data.stock - item.quantity;
-        if (novoEstoque < 0) throw new Error(`Estoque insuficiente para ${item.product.name}`);
-
-        let { error: updateError } = await supabase
-          .from('products')
-          .update({ stock: novoEstoque })
-          .eq('id', item.product.id);
-        if (updateError) throw updateError;
-      }
-    } catch (error) {
-      setError("Erro ao atualizar estoque");
-    }
-  };
-
-  async function emitirNotaFiscal(order) {
-    try {
-      const response = await fetch(process.env.NFE_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NFE_API_KEY}`
-        },
-        body: JSON.stringify({
-          numero_pedido: order.number,
-          cliente: order.customer,
-          itens: order.items,
-          valor_total: order.total_amount
-        })
-      });
-
-      if (!response.ok) throw new Error("Erro ao emitir NFe");
-
-      await supabase
-        .from('sales_orders')
-        .update({ status: 'nf_emitted' })
-        .eq('id', order.id);
-    } catch (error) {
-      setError("Erro ao emitir Nota Fiscal.");
-    }
-  }
-
-  return <div> {/* Renderização da tabela e botões */} </div>;
-}
-
 
   const handleRejectOrder = async (order: SalesOrder) => {
     if (!isManager && !isAdmin) {
@@ -563,6 +656,7 @@ export function SalesOrders() {
                     <>
                       <button
                         onClick={() => handleApproveOrder(order)}
+                        disabled={processing}
                         className="text-green-600 hover:text-green-900 mr-3"
                         title="Aprovar Pedido"
                       >
@@ -570,6 +664,7 @@ export function SalesOrders() {
                       </button>
                       <button
                         onClick={() => handleRejectOrder(order)}
+                        disabled={processing}
                         className="text-red-600 hover:text-red-900 mr-3"
                         title="Rejeitar Pedido"
                       >
@@ -581,6 +676,7 @@ export function SalesOrders() {
                   {(isManager || isAdmin) && order.status === 'pending' && (
                     <button
                       onClick={() => handleCancelOrder(order)}
+                      disabled={processing}
                       className="text-red-600 hover:text-red-900"
                       title="Cancelar Pedido"
                     >
@@ -626,3 +722,5 @@ export function SalesOrders() {
 }
 
 export default SalesOrders;
+
+export { SalesOrders };

@@ -74,9 +74,13 @@ interface NFeData {
 
 export class NFe {
   private apiUrl: string;
+  private ambiente: string;
+  private uf: string;
 
   constructor() {
     this.apiUrl = import.meta.env.VITE_SEFAZ_API_URL || 'https://homologacao.nfe.fazenda.sp.gov.br/ws';
+    this.ambiente = import.meta.env.VITE_SEFAZ_AMBIENTE || '2'; // 1=Produção, 2=Homologação
+    this.uf = import.meta.env.VITE_SEFAZ_UF || 'SP';
   }
 
   async emitir(data: NFeData): Promise<{
@@ -97,20 +101,25 @@ export class NFe {
       const nfeSerie = data.serie;
       const nfeChave = '35' + new Date().getTime().toString();
 
+      // Generate URLs for documents
+      const baseUrl = this.apiUrl.replace('/ws', '');
+      const pdfUrl = `${baseUrl}/danfe/${nfeChave}`;
+      const xmlUrl = `${baseUrl}/xml/${nfeChave}`;
+
       return {
         success: true,
         message: 'NF-e emitida com sucesso',
         nfe_numero: nfeNumero,
         nfe_serie: nfeSerie,
         nfe_chave: nfeChave,
-        pdf_url: `${this.apiUrl}/danfe/${nfeChave}`,
-        xml_url: `${this.apiUrl}/xml/${nfeChave}`
+        pdf_url: pdfUrl,
+        xml_url: xmlUrl
       };
     } catch (error) {
       console.error('Erro ao emitir NF-e:', error);
       return {
         success: false,
-        message: error.message || 'Erro ao emitir NF-e'
+        message: error instanceof Error ? error.message : 'Erro ao emitir NF-e'
       };
     }
   }
@@ -131,7 +140,7 @@ export class NFe {
       console.error('Erro ao cancelar NF-e:', error);
       return {
         success: false,
-        message: error.message || 'Erro ao cancelar NF-e'
+        message: error instanceof Error ? error.message : 'Erro ao cancelar NF-e'
       };
     }
   }
@@ -157,7 +166,7 @@ export class NFe {
       console.error('Erro ao inutilizar numeração:', error);
       return {
         success: false,
-        message: error.message || 'Erro ao inutilizar numeração'
+        message: error instanceof Error ? error.message : 'Erro ao inutilizar numeração'
       };
     }
   }
@@ -180,7 +189,7 @@ export class NFe {
       console.error('Erro ao consultar status do serviço:', error);
       return {
         success: false,
-        message: error.message || 'Serviço indisponível',
+        message: error instanceof Error ? error.message : 'Serviço indisponível',
         online: false
       };
     }
