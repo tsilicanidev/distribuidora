@@ -247,15 +247,15 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
 }
 
 export function SalesOrders() {
-  const [orders, setOrders] = useState<SalesOrder[]>([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const { isManager, isAdmin } = useRole();
+  const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -298,27 +298,90 @@ export function SalesOrders() {
     }
   }
 
-  const handleApproveOrder = async (order: SalesOrder) => {
+  async function handleApproveOrder(order) {
     if (!isManager && !isAdmin) {
       setError('Você não tem permissão para aprovar pedidos');
       return;
     }
 
+    setProcessing(true);
     try {
-      const { error } = await supabase
+      // Atualiza para "invoiced"
+      let { error } = await supabase
         .from('sales_orders')
-        .update({ status: 'approved' })
+        .update({ status: 'invoiced' })
         .eq('id', order.id);
-
       if (error) throw error;
-      
-      setError(null);
+
+      // Atualiza estoque
+      await atualizarEstoque(order);
+
+      // Emite NF automaticamente
+      await emitirNotaFiscal(order);
+
+      alert(`Pedido ${order.number} aprovado, faturado e NF emitida com sucesso!`);
       fetchOrders();
     } catch (error) {
-      console.error('Erro ao aprovar pedido:', error);
-      setError('Erro ao aprovar pedido. Por favor, tente novamente.');
+      setError('Erro ao processar pedido.');
+    } finally {
+      setProcessing(false);
     }
   };
+
+  async function atualizarEstoque(order) {
+    try {
+      for (const item of order.items || []) {
+        let { data, error } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.product.id)
+          .single();
+
+        if (error || !data) throw error || new Error("Produto não encontrado");
+        const novoEstoque = data.stock - item.quantity;
+        if (novoEstoque < 0) throw new Error(`Estoque insuficiente para ${item.product.name}`);
+
+        let { error: updateError } = await supabase
+          .from('products')
+          .update({ stock: novoEstoque })
+          .eq('id', item.product.id);
+        if (updateError) throw updateError;
+      }
+    } catch (error) {
+      setError("Erro ao atualizar estoque");
+    }
+  };
+
+  async function emitirNotaFiscal(order) {
+    try {
+      const response = await fetch(process.env.NFE_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.NFE_API_KEY}`
+        },
+        body: JSON.stringify({
+          numero_pedido: order.number,
+          cliente: order.customer,
+          itens: order.items,
+          valor_total: order.total_amount
+        })
+      });
+
+      if (!response.ok) throw new Error("Erro ao emitir NFe");
+
+      await supabase
+        .from('sales_orders')
+        .update({ status: 'nf_emitted' })
+        .eq('id', order.id);
+    } catch (error) {
+      setError("Erro ao emitir Nota Fiscal.");
+    }
+  }
+
+  return <div> {/* Renderização da tabela e botões */} </div>;
+}
+
 
   const handleRejectOrder = async (order: SalesOrder) => {
     if (!isManager && !isAdmin) {
