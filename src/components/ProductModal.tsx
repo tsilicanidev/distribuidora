@@ -15,6 +15,7 @@ interface ProductModalProps {
     stock_quantity: number;
     min_stock: number;
     max_stock: number | null;
+    unit: string;
   };
 }
 
@@ -27,6 +28,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product }: ProductMod
     stock_quantity: product?.stock_quantity || 0,
     min_stock: product?.min_stock || 0,
     max_stock: product?.max_stock || null,
+    unit: product?.unit || 'UN',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +121,25 @@ export function ProductModal({ isOpen, onClose, onSuccess, product }: ProductMod
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Unidade
+            </label>
+            <select
+              required
+              value={formData.unit}
+              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+            >
+              <option value="UN">Unidade (UN)</option>
+              <option value="CX">Caixa (CX)</option>
+              <option value="KG">Quilograma (KG)</option>
+              <option value="L">Litro (L)</option>
+              <option value="PCT">Pacote (PCT)</option>
+              <option value="FD">Fardo (FD)</option>
+            </select>
           </div>
 
           <div>

@@ -6,7 +6,7 @@ import { NFe } from '../services/nfe';
 interface Supplier {
   id: string;
   razao_social: string;
-  cpf_cnpj: string;
+  cnpj: string;
 }
 
 interface Product {
@@ -31,7 +31,7 @@ export function InvoiceEntry() {
   const [emitindoNFe, setEmitindoNFe] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [invoiceData, setInvoiceData] = useState({
+  const [formData, setFormData] = useState({
     number: '',
     supplier_id: '',
     issue_date: new Date().toISOString().split('T')[0],
@@ -53,15 +53,19 @@ export function InvoiceEntry() {
   async function fetchData() {
     try {
       const [
-        { data: suppliersData },
-        { data: productsData },
+        { data: suppliersData, error: suppliersError },
+        { data: productsData, error: productsError }
       ] = await Promise.all([
-        supabase.from('customers').select('id, razao_social, cpf_cnpj').order('razao_social'),
-        supabase.from('products').select('*').order('name'),
+        supabase.from('suppliers').select('id, razao_social, cnpj').order('razao_social'),
+        supabase.from('products').select('*').order('name')
       ]);
+
+      if (suppliersError) throw suppliersError;
+      if (productsError) throw productsError;
 
       setSuppliers(suppliersData || []);
       setProducts(productsData || []);
+      setError(null);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       setError('Erro ao carregar dados. Por favor, tente novamente.');
@@ -80,6 +84,7 @@ export function InvoiceEntry() {
   };
 
   const removeItem = (index: number) => {
+    if (items.length === 1) return;
     setItems(items.filter((_, i) => i !== index));
   };
 
@@ -87,21 +92,25 @@ export function InvoiceEntry() {
     const newItems = [...items];
     const currentItem = { ...newItems[index] };
 
-    // Update the specified field
-    currentItem[field] = value;
-
-    // If changing product_id, update unit_price
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
       if (product) {
+        currentItem.product_id = value;
         currentItem.unit_price = product.price;
         currentItem.total_price = product.price * currentItem.quantity;
       }
-    }
-
-    // If changing quantity or unit_price, update total_price
-    if (field === 'quantity' || field === 'unit_price') {
-      currentItem.total_price = currentItem.quantity * currentItem.unit_price;
+    } else if (field === 'quantity') {
+      const quantity = parseInt(value) || 0;
+      if (quantity > 0) {
+        currentItem.quantity = quantity;
+        currentItem.total_price = currentItem.unit_price * quantity;
+      }
+    } else if (field === 'unit_price') {
+      const price = parseFloat(value) || 0;
+      if (price >= 0) {
+        currentItem.unit_price = price;
+        currentItem.total_price = price * currentItem.quantity;
+      }
     }
 
     newItems[index] = currentItem;
@@ -111,151 +120,65 @@ export function InvoiceEntry() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setEmitindoNFe(true);
     setError(null);
 
     try {
+      // Validate inputs
+      if (!formData.supplier_id) {
+        throw new Error('Selecione um fornecedor');
+      }
+
+      if (!items.length || items.some(item => !item.product_id)) {
+        throw new Error('Adicione pelo menos um produto');
+      }
+
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Busca dados do fornecedor
-      const { data: fornecedor } = await supabase
-        .from('customers')
+      // Get supplier data
+      const { data: supplier } = await supabase
+        .from('suppliers')
         .select('*')
-        .eq('id', invoiceData.supplier_id)
+        .eq('id', formData.supplier_id)
         .single();
 
-      if (!fornecedor) throw new Error('Fornecedor não encontrado');
+      if (!supplier) throw new Error('Fornecedor não encontrado');
 
-      // Prepara dados para emissão da NF-e
-      const nfeData = {
-        numero: invoiceData.number,
-        serie: '1',
-        natureza_operacao: 'COMPRA PARA COMERCIALIZAÇÃO',
-        tipo_documento: '1', // NF-e entrada
-        destino_operacao: '1', // Operação interna
-        finalidade_emissao: '1', // NF-e normal
-        consumidor_final: '0', // Não
-        presenca_comprador: '9', // Operação não presencial
-        data_emissao: new Date().toISOString(),
-        data_saida: new Date().toISOString(),
-        emitente: {
-          cnpj: fornecedor.cpf_cnpj,
-          inscricao_estadual: fornecedor.ie,
-          nome: fornecedor.razao_social,
-          nome_fantasia: fornecedor.fantasia,
-          endereco: {
-            logradouro: fornecedor.endereco,
-            numero: '',
-            bairro: fornecedor.bairro,
-            municipio: fornecedor.cidade,
-            uf: fornecedor.estado,
-            cep: fornecedor.cep,
-            pais: 'Brasil'
-          }
-        },
-        destinatario: {
-          cpf_cnpj: import.meta.env.VITE_EMPRESA_CNPJ,
-          inscricao_estadual: import.meta.env.VITE_EMPRESA_IE,
-          nome: import.meta.env.VITE_EMPRESA_RAZAO_SOCIAL,
-          email: import.meta.env.VITE_EMPRESA_EMAIL,
-          endereco: {
-            logradouro: import.meta.env.VITE_EMPRESA_ENDERECO,
-            numero: import.meta.env.VITE_EMPRESA_NUMERO,
-            bairro: import.meta.env.VITE_EMPRESA_BAIRRO,
-            municipio: import.meta.env.VITE_EMPRESA_CIDADE,
-            uf: import.meta.env.VITE_EMPRESA_UF,
-            cep: import.meta.env.VITE_EMPRESA_CEP,
-            pais: 'Brasil'
-          }
-        },
-        itens: await Promise.all(items.map(async (item) => {
-          const { data: produto } = await supabase
-            .from('products')
-            .select('*')
-            .eq('id', item.product_id)
-            .single();
+      // Calculate totals
+      const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
+      const taxAmount = totalAmount * 0.18; // 18% tax rate
 
-          return {
-            produto: {
-              codigo: produto.id,
-              descricao: produto.name,
-              ncm: produto.ncm || '00000000',
-              cfop: '1102',
-              unidade: produto.unidade || 'UN',
-              quantidade: item.quantity,
-              valor_unitario: item.unit_price,
-              valor_total: item.total_price
-            },
-            imposto: {
-              icms: {
-                origem: '0',
-                cst: '00',
-                aliquota: 18,
-                base_calculo: item.total_price,
-                valor: item.total_price * 0.18
-              }
-            }
-          };
-        })),
-        valor_frete: 0,
-        valor_seguro: 0,
-        valor_total: items.reduce((sum, item) => sum + item.total_price, 0),
-        valor_produtos: items.reduce((sum, item) => sum + item.total_price, 0),
-        valor_desconto: 0,
-        informacoes_complementares: ''
-      };
-
-      // Emite NF-e
-      const nfeResult = await nfeService.emitir(nfeData);
-
-      if (!nfeResult.success) {
-        throw new Error(nfeResult.message);
-      }
-
-      // Salva a nota fiscal no banco de dados
+      // Create fiscal invoice
       const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
+        .from('fiscal_invoices')
         .insert([{
-          number: invoiceData.number,
-          supplier_id: invoiceData.supplier_id,
-          issue_date: invoiceData.issue_date,
-          total_amount: items.reduce((sum, item) => sum + item.total_price, 0),
-          nfe_numero: nfeResult.nfe_numero,
-          nfe_serie: nfeResult.nfe_serie,
-          nfe_chave: nfeResult.nfe_chave,
-          nfe_pdf_url: nfeResult.pdf_url,
-          nfe_xml_url: nfeResult.xml_url,
-          created_by: user.id,
+          number: formData.number,
+          series: '1',
+          issue_date: formData.issue_date,
+          customer_id: formData.supplier_id, // Using supplier as customer for now
+          total_amount: totalAmount,
+          tax_amount: taxAmount,
+          status: 'draft',
+          created_by: user.id
         }])
         .select()
         .single();
 
       if (invoiceError) throw invoiceError;
 
-      // Insere os itens e atualiza o estoque
+      // Update product stock
       for (const item of items) {
-        // Insere o item
-        const { error: itemError } = await supabase
-          .from('invoice_items')
-          .insert([{
-            invoice_id: invoice.id,
-            ...item,
-          }]);
-
-        if (itemError) throw itemError;
-
-        // Atualiza o estoque
         const { error: stockError } = await supabase
           .from('products')
           .update({
-            stock_quantity: supabase.sql`stock_quantity + ${item.quantity}`,
+            stock_quantity: supabase.sql`stock_quantity + ${item.quantity}`
           })
           .eq('id', item.product_id);
 
         if (stockError) throw stockError;
 
-        // Registra movimentação de estoque
+        // Create stock movement
         const { error: movementError } = await supabase
           .from('stock_movements')
           .insert([{
@@ -263,16 +186,14 @@ export function InvoiceEntry() {
             quantity: item.quantity,
             type: 'IN',
             reference_id: invoice.id,
-            created_by: user.id,
+            created_by: user.id
           }]);
 
         if (movementError) throw movementError;
       }
 
-      alert('Nota fiscal processada e NF-e emitida com sucesso!');
-      
       // Reset form
-      setInvoiceData({
+      setFormData({
         number: '',
         supplier_id: '',
         issue_date: new Date().toISOString().split('T')[0],
@@ -283,21 +204,14 @@ export function InvoiceEntry() {
         unit_price: 0,
         total_price: 0,
       }]);
+      setError(null);
 
-      // Abre os documentos fiscais em novas abas
-      if (nfeResult.pdf_url) {
-        window.open(nfeResult.pdf_url, '_blank');
-      }
-      if (nfeResult.xml_url) {
-        window.open(nfeResult.xml_url, '_blank');
-      }
-
+      alert('Nota fiscal de entrada registrada com sucesso!');
     } catch (error) {
       console.error('Erro ao processar nota fiscal:', error);
-      setError(error.message || 'Erro ao processar nota fiscal. Por favor, tente novamente.');
+      setError(error instanceof Error ? error.message : 'Erro ao processar nota fiscal');
     } finally {
       setSaving(false);
-      setEmitindoNFe(false);
     }
   };
 
@@ -333,8 +247,8 @@ export function InvoiceEntry() {
               <input
                 type="text"
                 required
-                value={invoiceData.number}
-                onChange={(e) => setInvoiceData({ ...invoiceData, number: e.target.value })}
+                value={formData.number}
+                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
                 className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
               />
             </div>
@@ -345,14 +259,14 @@ export function InvoiceEntry() {
               </label>
               <select
                 required
-                value={invoiceData.supplier_id}
-                onChange={(e) => setInvoiceData({ ...invoiceData, supplier_id: e.target.value })}
+                value={formData.supplier_id}
+                onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
                 className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
               >
                 <option value="">Selecione um fornecedor</option>
                 {suppliers.map((supplier) => (
                   <option key={supplier.id} value={supplier.id}>
-                    {supplier.razao_social} ({supplier.cpf_cnpj})
+                    {supplier.razao_social} ({supplier.cnpj})
                   </option>
                 ))}
               </select>
@@ -365,8 +279,8 @@ export function InvoiceEntry() {
               <input
                 type="date"
                 required
-                value={invoiceData.issue_date}
-                onChange={(e) => setInvoiceData({ ...invoiceData, issue_date: e.target.value })}
+                value={formData.issue_date}
+                onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
                 className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
               />
             </div>
@@ -423,7 +337,7 @@ export function InvoiceEntry() {
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Preço Unitário *
+                  Preço Unit. *
                 </label>
                 <input
                   type="number"
@@ -438,7 +352,7 @@ export function InvoiceEntry() {
 
               <div className="col-span-3">
                 <label className="block text-sm font-medium text-gray-700">
-                  Preço Total
+                  Total
                 </label>
                 <input
                   type="number"

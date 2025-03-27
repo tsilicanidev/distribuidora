@@ -24,7 +24,7 @@ ChartJS.register(
 interface ReportFilter {
   startDate: string;
   endDate: string;
-  type: 'sales' | 'inventory' | 'sellers' | 'all';
+  type: 'sales' | 'inventory' | 'sellers' | 'financial' | 'products' | 'purchases' | 'all';
 }
 
 interface ReportData {
@@ -65,253 +65,260 @@ export function Reports() {
     try {
       let data: ReportData | null = null;
 
-      if (filters.type === 'all' || filters.type === 'sellers') {
-        // Fetch sellers report
-        const { data: salesOrders, error: salesError } = await supabase
-          .from('sales_orders')
+      if (filters.type === 'all' || filters.type === 'purchases') {
+        // Fetch fiscal invoices with supplier data
+        const { data: invoices, error: invoicesError } = await supabase
+          .from('fiscal_invoices')
           .select(`
-            id,
-            number,
-            total_amount,
-            commission_amount,
-            created_at,
-            seller:profiles(id, full_name)
+            *,
+            supplier:suppliers(
+              razao_social,
+              cnpj
+            )
           `)
-          .gte('created_at', filters.startDate)
-          .lte('created_at', filters.endDate + 'T23:59:59')
-          .order('created_at');
+          .gte('issue_date', filters.startDate)
+          .lte('issue_date', filters.endDate + 'T23:59:59')
+          .order('issue_date');
 
-        if (salesError) throw salesError;
+        if (invoicesError) throw invoicesError;
 
-        if (!salesOrders || salesOrders.length === 0) {
-          setError('Nenhum dado de vendas encontrado para o período selecionado.');
+        if (!invoices || invoices.length === 0) {
+          setError('Nenhuma nota fiscal encontrada para o período selecionado.');
           return;
         }
 
-        // Process sales data by seller
-        const sellerStats = salesOrders.reduce((acc: any, order) => {
-          const sellerName = order.seller?.full_name || 'Desconhecido';
+        // Group invoices by supplier
+        const supplierStats = invoices.reduce((acc: any, invoice) => {
+          const supplierName = invoice.supplier?.razao_social || 'Desconhecido';
           
-          if (!acc[sellerName]) {
-            acc[sellerName] = {
-              seller: sellerName,
-              totalSales: 0,
-              totalCommission: 0,
-              orderCount: 0,
-              averageOrderValue: 0,
-            };
-          }
-          
-          acc[sellerName].totalSales += order.total_amount || 0;
-          acc[sellerName].totalCommission += order.commission_amount || 0;
-          acc[sellerName].orderCount += 1;
-          
-          return acc;
-        }, {});
-
-        // Calculate averages and format data
-        const sellersData = Object.values(sellerStats).map((stats: any) => ({
-          ...stats,
-          averageOrderValue: stats.orderCount > 0 ? stats.totalSales / stats.orderCount : 0,
-        }));
-
-        // Sort by total sales descending
-        sellersData.sort((a: any, b: any) => b.totalSales - a.totalSales);
-
-        data = {
-          title: 'Relatório de Vendedores',
-          chartData: {
-            labels: sellersData.map((d: any) => d.seller),
-            datasets: [
-              {
-                label: 'Total de Vendas (R$)',
-                data: sellersData.map((d: any) => d.totalSales),
-                backgroundColor: 'rgba(255, 138, 0, 0.5)',
-                borderColor: '#FF8A00',
-                borderWidth: 1,
-              },
-              {
-                label: 'Comissão (R$)',
-                data: sellersData.map((d: any) => d.totalCommission),
-                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                borderColor: '#4BC0C0',
-                borderWidth: 1,
-              },
-            ],
-          },
-          tableData: sellersData,
-          tableColumns: [
-            { header: 'Vendedor', accessor: 'seller' },
-            { 
-              header: 'Total de Vendas', 
-              accessor: 'totalSales',
-              format: (value) => `R$ ${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-            },
-            { 
-              header: 'Comissão', 
-              accessor: 'totalCommission',
-              format: (value) => `R$ ${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-            },
-            { header: 'Pedidos', accessor: 'orderCount' },
-            { 
-              header: 'Ticket Médio', 
-              accessor: 'averageOrderValue',
-              format: (value) => `R$ ${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-            },
-          ],
-        };
-      }
-
-      if (filters.type === 'all' || filters.type === 'inventory') {
-        // Fetch inventory movements
-        const { data: movements, error: movementsError } = await supabase
-          .from('stock_movements')
-          .select(`
-            id,
-            type,
-            quantity,
-            created_at,
-            product:products(name)
-          `)
-          .gte('created_at', filters.startDate)
-          .lte('created_at', filters.endDate + 'T23:59:59')
-          .order('created_at');
-
-        if (movementsError) throw movementsError;
-
-        if (!movements || movements.length === 0) {
-          setError('Nenhum movimento de estoque encontrado para o período selecionado.');
-          return;
-        }
-
-        // Process movements by product
-        const productStats = movements.reduce((acc: any, movement) => {
-          const productName = movement.product?.name || 'Desconhecido';
-          
-          if (!acc[productName]) {
-            acc[productName] = {
-              product: productName,
-              totalIn: 0,
-              totalOut: 0,
-              movementCount: 0,
-            };
-          }
-          
-          if (movement.type === 'IN') {
-            acc[productName].totalIn += movement.quantity || 0;
-          } else {
-            acc[productName].totalOut += movement.quantity || 0;
-          }
-          acc[productName].movementCount += 1;
-          
-          return acc;
-        }, {});
-
-        const inventoryData = Object.values(productStats);
-
-        data = {
-          title: 'Relatório de Estoque',
-          chartData: {
-            labels: inventoryData.map((d: any) => d.product),
-            datasets: [
-              {
-                label: 'Entradas',
-                data: inventoryData.map((d: any) => d.totalIn),
-                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                borderColor: '#4BC0C0',
-                borderWidth: 1,
-              },
-              {
-                label: 'Saídas',
-                data: inventoryData.map((d: any) => d.totalOut),
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                borderColor: '#FF6384',
-                borderWidth: 1,
-              },
-            ],
-          },
-          tableData: inventoryData,
-          tableColumns: [
-            { header: 'Produto', accessor: 'product' },
-            { header: 'Total Entradas', accessor: 'totalIn' },
-            { header: 'Total Saídas', accessor: 'totalOut' },
-            { header: 'Movimentações', accessor: 'movementCount' },
-          ],
-        };
-      }
-
-      if (filters.type === 'all' || filters.type === 'sales') {
-        // Fetch sales data
-        const { data: sales, error: salesError } = await supabase
-          .from('sales_orders')
-          .select(`
-            id,
-            number,
-            total_amount,
-            created_at,
-            customer:customers(razao_social)
-          `)
-          .gte('created_at', filters.startDate)
-          .lte('created_at', filters.endDate + 'T23:59:59')
-          .order('created_at');
-
-        if (salesError) throw salesError;
-
-        if (!sales || sales.length === 0) {
-          setError('Nenhuma venda encontrada para o período selecionado.');
-          return;
-        }
-
-        // Group sales by date
-        const salesByDate = sales.reduce((acc: any, sale) => {
-          const date = new Date(sale.created_at).toLocaleDateString();
-          
-          if (!acc[date]) {
-            acc[date] = {
-              date,
+          if (!acc[supplierName]) {
+            acc[supplierName] = {
+              supplier: supplierName,
+              cnpj: invoice.supplier?.cnpj || '',
+              invoiceCount: 0,
               totalAmount: 0,
-              orderCount: 0,
-              averageAmount: 0,
+              totalTax: 0,
             };
           }
           
-          acc[date].totalAmount += sale.total_amount || 0;
-          acc[date].orderCount += 1;
-          acc[date].averageAmount = acc[date].totalAmount / acc[date].orderCount;
+          acc[supplierName].invoiceCount += 1;
+          acc[supplierName].totalAmount += invoice.total_amount || 0;
+          acc[supplierName].totalTax += invoice.tax_amount || 0;
           
           return acc;
         }, {});
 
-        const salesData = Object.values(salesByDate);
+        // Convert to array and sort by total amount
+        const supplierData = Object.values(supplierStats);
+        supplierData.sort((a: any, b: any) => b.totalAmount - a.totalAmount);
+
+        // Group by month for the chart
+        const monthlyData = invoices.reduce((acc: any, invoice) => {
+          const month = new Date(invoice.issue_date).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+          
+          if (!acc[month]) {
+            acc[month] = {
+              totalAmount: 0,
+              totalTax: 0,
+            };
+          }
+          
+          acc[month].totalAmount += invoice.total_amount || 0;
+          acc[month].totalTax += invoice.tax_amount || 0;
+          
+          return acc;
+        }, {});
+
+        const months = Object.keys(monthlyData);
+        const totalAmounts = months.map(month => monthlyData[month].totalAmount);
+        const totalTaxes = months.map(month => monthlyData[month].totalTax);
 
         data = {
-          title: 'Relatório de Vendas',
+          title: 'Relatório de Compras por Fornecedor',
           chartData: {
-            labels: salesData.map((d: any) => d.date),
+            labels: months,
             datasets: [
               {
-                label: 'Total de Vendas (R$)',
-                data: salesData.map((d: any) => d.totalAmount),
+                label: 'Valor Total (R$)',
+                data: totalAmounts,
                 backgroundColor: 'rgba(255, 138, 0, 0.5)',
                 borderColor: '#FF8A00',
                 borderWidth: 1,
               },
+              {
+                label: 'Impostos (R$)',
+                data: totalTaxes,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: '#4BC0C0',
+                borderWidth: 1,
+              },
             ],
           },
-          tableData: salesData,
+          tableData: supplierData,
           tableColumns: [
-            { header: 'Data', accessor: 'date' },
             { 
-              header: 'Total de Vendas', 
+              header: 'Fornecedor', 
+              accessor: 'supplier' 
+            },
+            { 
+              header: 'CNPJ', 
+              accessor: 'cnpj' 
+            },
+            { 
+              header: 'Qtd. Notas', 
+              accessor: 'invoiceCount' 
+            },
+            { 
+              header: 'Valor Total', 
               accessor: 'totalAmount',
               format: (value) => `R$ ${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
             },
-            { header: 'Quantidade de Pedidos', accessor: 'orderCount' },
             { 
-              header: 'Média por Pedido', 
-              accessor: 'averageAmount',
+              header: 'Total Impostos', 
+              accessor: 'totalTax',
               format: (value) => `R$ ${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
             },
+            { 
+              header: 'Média por NF', 
+              accessor: 'totalAmount',
+              format: (value, row) => `R$ ${(value / row.invoiceCount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+            },
+          ],
+        };
+      } else if (filters.type === 'all' || filters.type === 'products') {
+        // Fetch products with their sales and purchase data
+        const { data: products, error: productsError } = await supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            unit,
+            sales_order_items (
+              quantity,
+              unit_price,
+              total_price,
+              sales_order:sales_orders (
+                status
+              )
+            ),
+            customer_order_items (
+              quantity,
+              unit_price,
+              total_price,
+              order:customer_orders (
+                status
+              )
+            )
+          `);
+
+        if (productsError) throw productsError;
+
+        // Process product data
+        const productStats = products.map(product => {
+          // Calculate average purchase price from fiscal invoices
+          const purchaseItems = product.customer_order_items || [];
+          const totalPurchaseQuantity = purchaseItems.reduce((sum: number, item: any) => 
+            item.order?.status === 'approved' ? sum + item.quantity : sum, 0);
+          const totalPurchaseValue = purchaseItems.reduce((sum: number, item: any) => 
+            item.order?.status === 'approved' ? sum + item.total_price : sum, 0);
+          const avgPurchasePrice = totalPurchaseQuantity > 0 
+            ? totalPurchaseValue / totalPurchaseQuantity 
+            : 0;
+
+          // Calculate average sale price from sales orders
+          const saleItems = product.sales_order_items || [];
+          const totalSaleQuantity = saleItems.reduce((sum: number, item: any) => 
+            item.sales_order?.status === 'completed' ? sum + item.quantity : sum, 0);
+          const totalSaleValue = saleItems.reduce((sum: number, item: any) => 
+            item.sales_order?.status === 'completed' ? sum + item.total_price : sum, 0);
+          const avgSalePrice = totalSaleQuantity > 0 
+            ? totalSaleValue / totalSaleQuantity 
+            : 0;
+
+          // Calculate profit margin
+          const profitPerUnit = avgSalePrice - avgPurchasePrice;
+          const profitMargin = avgPurchasePrice > 0 
+            ? (profitPerUnit / avgPurchasePrice) * 100 
+            : 0;
+
+          return {
+            name: product.name,
+            unit: product.unit,
+            avgPurchasePrice,
+            avgSalePrice,
+            profitPerUnit,
+            profitMargin,
+            totalSaleQuantity,
+            totalSaleValue,
+            totalPurchaseQuantity,
+            totalPurchaseValue
+          };
+        });
+
+        // Sort by profit margin descending
+        productStats.sort((a, b) => b.profitMargin - a.profitMargin);
+
+        data = {
+          title: 'Relatório de Lucratividade por Produto',
+          chartData: {
+            labels: productStats.map(p => p.name),
+            datasets: [
+              {
+                label: 'Preço de Compra (R$)',
+                data: productStats.map(p => p.avgPurchasePrice),
+                backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red
+              },
+              {
+                label: 'Preço de Venda (R$)',
+                data: productStats.map(p => p.avgSalePrice),
+                backgroundColor: 'rgba(34, 197, 94, 0.8)', // Green
+              },
+              {
+                label: 'Margem de Lucro (%)',
+                data: productStats.map(p => p.profitMargin),
+                backgroundColor: 'rgba(255, 138, 0, 0.8)', // Orange
+              }
+            ],
+          },
+          tableData: productStats,
+          tableColumns: [
+            { 
+              header: 'Produto', 
+              accessor: 'name' 
+            },
+            { 
+              header: 'Unidade', 
+              accessor: 'unit' 
+            },
+            { 
+              header: 'Preço Médio de Compra', 
+              accessor: 'avgPurchasePrice',
+              format: (value) => `R$ ${value.toFixed(2)}`
+            },
+            { 
+              header: 'Preço Médio de Venda', 
+              accessor: 'avgSalePrice',
+              format: (value) => `R$ ${value.toFixed(2)}`
+            },
+            { 
+              header: 'Lucro por Unidade', 
+              accessor: 'profitPerUnit',
+              format: (value) => `R$ ${value.toFixed(2)}`
+            },
+            { 
+              header: 'Margem de Lucro', 
+              accessor: 'profitMargin',
+              format: (value) => `${value.toFixed(2)}%`
+            },
+            { 
+              header: 'Qtd. Vendida', 
+              accessor: 'totalSaleQuantity'
+            },
+            { 
+              header: 'Total Vendas', 
+              accessor: 'totalSaleValue',
+              format: (value) => `R$ ${value.toFixed(2)}`
+            }
           ],
         };
       }
@@ -370,6 +377,9 @@ export function Reports() {
               className="w-full rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-[#FF8A00]"
             >
               <option value="all">Todos os Relatórios</option>
+              <option value="purchases">Relatório de Compras</option>
+              <option value="products">Relatório de Lucratividade</option>
+              <option value="financial">Relatório Financeiro</option>
               <option value="sellers">Relatório de Vendedores</option>
               <option value="sales">Relatório de Vendas</option>
               <option value="inventory">Relatório de Estoque</option>
@@ -429,7 +439,14 @@ export function Reports() {
                   y: {
                     beginAtZero: true,
                     ticks: {
-                      callback: (value) => `${value}`,
+                      callback: (value) => {
+                        // If it's the profit margin dataset
+                        if (reportData.chartData.datasets[2]?.data.includes(Number(value))) {
+                          return `${value}%`;
+                        }
+                        // For price datasets
+                        return `R$ ${value.toLocaleString('pt-BR')}`;
+                      },
                     },
                   },
                 },
@@ -456,7 +473,7 @@ export function Reports() {
                   <tr key={rowIndex} className="hover:bg-gray-50">
                     {reportData.tableColumns.map((column, colIndex) => (
                       <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {column.format ? column.format(row[column.accessor]) : row[column.accessor]}
+                        {column.format ? column.format(row[column.accessor], row) : row[column.accessor]}
                       </td>
                     ))}
                   </tr>

@@ -13,6 +13,7 @@ interface Product {
   stock_quantity: number;
   min_stock: number;
   max_stock: number | null;
+  unit: string;
 }
 
 export function Products() {
@@ -71,6 +72,18 @@ export function Products() {
     }
   };
 
+  const getUnitLabel = (unit: string) => {
+    const labels: Record<string, string> = {
+      UN: 'Unidade',
+      CX: 'Caixa',
+      KG: 'Quilograma',
+      L: 'Litro',
+      PCT: 'Pacote',
+      FD: 'Fardo'
+    };
+    return labels[unit] || unit;
+  };
+
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -122,6 +135,9 @@ export function Products() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Categoria
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Unidade
+                </th>
                 {!isSeller && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Preço
@@ -155,6 +171,9 @@ export function Products() {
                       {product.category}
                     </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {getUnitLabel(product.unit)}
+                  </td>
                   {!isSeller && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       R$ {product.price.toFixed(2)}
@@ -162,11 +181,11 @@ export function Products() {
                   )}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {product.stock_quantity}
+                      {product.stock_quantity} {product.unit}
                     </div>
                     {!isSeller && (
                       <div className="text-xs text-gray-500">
-                        Mín: {product.min_stock} {product.max_stock && `/ Máx: ${product.max_stock}`}
+                        Mín: {product.min_stock} {product.unit} {product.max_stock && `/ Máx: ${product.max_stock} ${product.unit}`}
                       </div>
                     )}
                   </td>

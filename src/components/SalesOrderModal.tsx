@@ -13,6 +13,7 @@ interface Product {
   name: string;
   price: number;
   stock_quantity: number;
+  unit: string;
 }
 
 interface SalesOrderItem {
@@ -39,6 +40,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   const [formData, setFormData] = useState({
     customer_id: '',
     notes: '',
+    discount_percentage: 0,
   });
 
   const [items, setItems] = useState<SalesOrderItem[]>([{
@@ -104,12 +106,21 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
         currentItem.total_price = product.price * currentItem.quantity;
       }
     } else if (field === 'quantity') {
-      currentItem.quantity = value;
-      currentItem.total_price = currentItem.unit_price * value;
+      const quantity = parseInt(value) || 0;
+      if (quantity > 0) {
+        currentItem.quantity = quantity;
+        currentItem.total_price = currentItem.unit_price * quantity;
+      }
     }
 
     newItems[index] = currentItem;
     setItems(newItems);
+  };
+
+  const calculateTotalWithDiscount = () => {
+    const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
+    const discountAmount = subtotal * (formData.discount_percentage / 100);
+    return subtotal - discountAmount;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,7 +143,9 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
       if (!user) throw new Error('Usuário não autenticado');
 
       // Calculate totals
-      const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
+      const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
+      const discountAmount = subtotal * (formData.discount_percentage / 100);
+      const totalAmount = subtotal - discountAmount;
       const commissionAmount = totalAmount * 0.05; // 5% commission
 
       // Create order with retry logic
@@ -151,7 +164,10 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
               status: 'pending',
               notes: formData.notes,
               total_amount: totalAmount,
-              commission_amount: commissionAmount
+              commission_amount: commissionAmount,
+              discount_percentage: formData.discount_percentage,
+              subtotal_amount: subtotal,
+              discount_amount: discountAmount
             }])
             .select()
             .single();
@@ -206,6 +222,11 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   };
 
   if (!isOpen) return null;
+
+  const getProductUnit = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    return product?.unit || 'UN';
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -290,7 +311,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
                     <option value="">Selecione um produto</option>
                     {products.map((product) => (
                       <option key={product.id} value={product.id}>
-                        {product.name} (Estoque: {product.stock_quantity})
+                        {product.name} (Estoque: {product.stock_quantity} {product.unit})
                       </option>
                     ))}
                   </select>
@@ -298,7 +319,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Quantidade *
+                    Quantidade * ({getProductUnit(item.product_id)})
                   </label>
                   <input
                     type="number"
@@ -315,9 +336,9 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
                     Preço Unit.
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     readOnly
-                    value={item.unit_price}
+                    value={item.unit_price.toFixed(2)}
                     className="mt-1 block w-full rounded-lg border border-gray-300 bg-gray-50"
                   />
                 </div>
@@ -327,9 +348,9 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
                     Total
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     readOnly
-                    value={item.total_price}
+                    value={item.total_price.toFixed(2)}
                     className="mt-1 block w-full rounded-lg border border-gray-300 bg-gray-50"
                   />
                 </div>
@@ -346,6 +367,34 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <label className="text-sm font-medium text-gray-700 mr-2">
+                  Desconto (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={formData.discount_percentage}
+                  onChange={(e) => setFormData({ ...formData, discount_percentage: parseFloat(e.target.value) || 0 })}
+                  className="w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#FF8A00]"
+                />
+              </div>
+              <div className="text-sm text-gray-500">
+                Subtotal: R$ {items.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-500">
+                Desconto: R$ {(items.reduce((sum, item) => sum + item.total_price, 0) * (formData.discount_percentage / 100)).toFixed(2)}
+              </div>
+            </div>
+            <div className="text-lg font-medium text-gray-900">
+              Total do Pedido: R$ {calculateTotalWithDiscount().toFixed(2)}
+            </div>
           </div>
 
           <div className="flex justify-end space-x-3">

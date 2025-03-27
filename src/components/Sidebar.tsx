@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   Map,
-  Link
+  Link,
+  Building2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -150,6 +151,18 @@ export function Sidebar() {
               >
                 <Users className="h-5 w-5 mr-3" />
                 <span className="font-medium">Clientes</span>
+              </NavLink>
+
+              <NavLink
+                to="/suppliers"
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-2 text-gray-600 hover:bg-[#FF8A00]/10 hover:text-[#FF8A00] rounded-lg transition-colors duration-200 ${
+                    isActive ? 'bg-[#FF8A00]/10 text-[#FF8A00]' : ''
+                  }`
+                }
+              >
+                <Building2 className="h-5 w-5 mr-3" />
+                <span className="font-medium">Fornecedores</span>
               </NavLink>
 
               <NavLink

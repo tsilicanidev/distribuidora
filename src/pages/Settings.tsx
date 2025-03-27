@@ -9,9 +9,10 @@ interface User {
   full_name: string;
   role: string;
   created_at: string;
+  commission_rate?: number;
 }
 
-export function Settings() {
+export default function Settings() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,6 +24,7 @@ export function Settings() {
     password: '',
     full_name: '',
     role: 'seller',
+    commission_rate: 5, // Default commission rate
   });
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,22 @@ export function Settings() {
 
       if (profilesError) throw profilesError;
 
-      setUsers(profiles || []);
+      // Get commission rates for sellers
+      const { data: commissionRates, error: ratesError } = await supabase
+        .from('commission_rates')
+        .select('*');
+
+      if (ratesError) throw ratesError;
+
+      // Combine profiles with commission rates
+      const usersWithCommission = profiles.map(profile => ({
+        ...profile,
+        commission_rate: profile.role === 'seller' 
+          ? commissionRates?.find(rate => rate.user_id === profile.id)?.rate || 5
+          : undefined
+      }));
+
+      setUsers(usersWithCommission || []);
       setError(null);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -96,13 +113,28 @@ export function Settings() {
           throw profileError;
         }
 
+        // If user is a seller, set commission rate
+        if (formData.role === 'seller') {
+          const { error: commissionError } = await supabase
+            .from('commission_rates')
+            .insert([{
+              user_id: authData.user.id,
+              rate: formData.commission_rate
+            }]);
+
+          if (commissionError) {
+            console.error('Error setting commission rate:', commissionError);
+          }
+        }
+
         // Add new user to local state
         const newUser = {
           id: authData.user.id,
           email: formData.email,
           full_name: formData.full_name,
           role: formData.role,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          commission_rate: formData.role === 'seller' ? formData.commission_rate : undefined
         };
         setUsers([newUser, ...users]);
 
@@ -112,6 +144,7 @@ export function Settings() {
           password: '',
           full_name: '',
           role: 'seller',
+          commission_rate: 5,
         });
         setShowModal(false);
         setError(null);
@@ -135,6 +168,16 @@ export function Settings() {
         .eq('id', id);
 
       if (profileError) throw profileError;
+
+      // Delete commission rate if exists
+      const { error: commissionError } = await supabase
+        .from('commission_rates')
+        .delete()
+        .eq('user_id', id);
+
+      if (commissionError) {
+        console.error('Error deleting commission rate:', commissionError);
+      }
 
       // Then delete auth user
       const { error: authError } = await supabase.auth.admin.deleteUser(id);
@@ -180,6 +223,29 @@ export function Settings() {
       setError(error instanceof Error ? error.message : 'Erro ao redefinir senha');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCommissionRateChange = async (userId: string, newRate: number) => {
+    try {
+      const { error } = await supabase
+        .from('commission_rates')
+        .upsert([{
+          user_id: userId,
+          rate: newRate
+        }]);
+
+      if (error) throw error;
+
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === userId 
+          ? { ...user, commission_rate: newRate }
+          : user
+      ));
+    } catch (error) {
+      console.error('Error updating commission rate:', error);
+      setError('Erro ao atualizar taxa de comissão');
     }
   };
 
@@ -262,6 +328,9 @@ export function Settings() {
                 Função
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Comissão (%)
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Data de Cadastro
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -286,6 +355,19 @@ export function Settings() {
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {user.role === 'seller' && (
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={user.commission_rate || 5}
+                      onChange={(e) => handleCommissionRateChange(user.id, parseFloat(e.target.value))}
+                      className="w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#FF8A00]"
+                    />
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(user.created_at).toLocaleDateString()}
@@ -398,6 +480,24 @@ export function Settings() {
                 </select>
               </div>
 
+              {formData.role === 'seller' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Taxa de Comissão (%)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={formData.commission_rate}
+                    onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) })}
+                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                  />
+                </div>
+              )}
+
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
@@ -488,4 +588,4 @@ export function Settings() {
   );
 }
 
-export default Settings;
+export { Settings };
