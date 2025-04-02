@@ -111,6 +111,12 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
         currentItem.quantity = quantity;
         currentItem.total_price = currentItem.unit_price * quantity;
       }
+    } else if (field === 'unit_price') {
+      const price = parseFloat(value) || 0;
+      if (price >= 0) {
+        currentItem.unit_price = price;
+        currentItem.total_price = price * currentItem.quantity;
+      }
     }
 
     newItems[index] = currentItem;
@@ -336,10 +342,12 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
                     Preço Unit.
                   </label>
                   <input
-                    type="text"
-                    readOnly
-                    value={item.unit_price.toFixed(2)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 bg-gray-50"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.unit_price}
+                    onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value))}
+                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
                   />
                 </div>
 

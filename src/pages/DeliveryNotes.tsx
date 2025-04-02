@@ -11,9 +11,7 @@ interface DeliveryNote {
     plate: string;
     model: string;
   };
-  route: {
-    name: string;
-  };
+  helper_name: string;
   status: string;
   created_at: string;
 }
@@ -36,8 +34,7 @@ export function DeliveryNotes() {
         .from('delivery_notes')
         .select(`
           *,
-          vehicle:vehicles(plate, model),
-          route:delivery_routes(name)
+          vehicle:vehicles(plate, model)
         `)
         .order('created_at', { ascending: false });
 
@@ -108,171 +105,353 @@ export function DeliveryNotes() {
     setShowModal(true);
   };
 
-  const printDeliveryNote = async (id: string) => {
+  const generateDeliveryNotePDF = async (id: string) => {
     try {
       // Fetch complete delivery note data
       const { data: note, error: noteError } = await supabase
         .from('delivery_notes')
         .select(`
           *,
-          vehicle:vehicles(plate, model),
-          route:delivery_routes(name),
-          items:delivery_note_items(
-            delivery_sequence,
-            order:sales_orders(
-              number,
-              customer:customers(
-                razao_social,
-                endereco,
-                bairro,
-                cidade,
-                estado
-              )
-            )
-          )
+          vehicle:vehicles(plate, model)
         `)
         .eq('id', id)
         .single();
 
       if (noteError) throw noteError;
 
+      // Fetch delivery note items separately
+      const { data: items, error: itemsError } = await supabase
+        .from('delivery_note_items')
+        .select(`
+          order_id,
+          delivery_address,
+          delivery_address_street,
+          delivery_address_number,
+          delivery_address_complement,
+          delivery_address_neighborhood,
+          delivery_address_city,
+          delivery_address_state,
+          delivery_address_notes
+        `)
+        .eq('delivery_note_id', id);
+
+      if (itemsError) throw itemsError;
+
+      // Fetch order details for each item
+      const orderDetails = [];
+      for (const item of items || []) {
+        const { data: order, error: orderError } = await supabase
+          .from('sales_orders')
+          .select(`
+            number,
+            customer:customers(
+              razao_social,
+              endereco,
+              bairro,
+              cidade,
+              estado
+            )
+          `)
+          .eq('id', item.order_id)
+          .single();
+
+        if (orderError) throw orderError;
+        
+        // Format address from components if available
+        let formattedAddress = '';
+        if (item.delivery_address_street || item.delivery_address_neighborhood || item.delivery_address_city) {
+          const addressParts = [];
+          
+          // Street and number
+          if (item.delivery_address_street) {
+            let streetNumber = item.delivery_address_street;
+            if (item.delivery_address_number) {
+              streetNumber += `, ${item.delivery_address_number}`;
+            }
+            if (item.delivery_address_complement) {
+              streetNumber += ` - ${item.delivery_address_complement}`;
+            }
+            addressParts.push(streetNumber);
+          }
+          
+          // Neighborhood
+          if (item.delivery_address_neighborhood) {
+            addressParts.push(item.delivery_address_neighborhood);
+          }
+          
+          // City and state
+          if (item.delivery_address_city) {
+            let cityState = item.delivery_address_city;
+            if (item.delivery_address_state) {
+              cityState += ` - ${item.delivery_address_state}`;
+            }
+            addressParts.push(cityState);
+          }
+          
+          formattedAddress = addressParts.join(', ');
+        } else if (item.delivery_address) {
+          // Use legacy delivery_address field if available
+          formattedAddress = item.delivery_address;
+        } else {
+          // Fallback to customer address
+          formattedAddress = `${order.customer.endereco}, ${order.customer.bairro}, ${order.customer.cidade} - ${order.customer.estado}`;
+        }
+        
+        orderDetails.push({
+          order: order,
+          formattedAddress: formattedAddress,
+          notes: item.delivery_address_notes
+        });
+      }
+
       // Create print window
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
-        alert('Por favor, permita popups para imprimir o romaneio.');
+        alert('Por favor, permita popups para gerar o PDF do romaneio.');
         return;
       }
 
-      // Generate HTML content
+      // Generate HTML content with two copies
       const content = `
         <!DOCTYPE html>
         <html>
         <head>
           <title>Romaneio ${note.number}</title>
           <style>
+            @page {
+              size: A4;
+              margin: 1cm;
+            }
             body {
               font-family: Arial, sans-serif;
-              margin: 20px;
+              margin: 0;
+              padding: 0;
               color: #333;
+              font-size: 10pt;
+            }
+            .page {
+              width: 100%;
+              height: 100%;
+              page-break-after: always;
+            }
+            .delivery-note {
+              border: 1px solid #ccc;
+              padding: 10px;
+              margin-bottom: 10px;
             }
             .header {
               text-align: center;
-              margin-bottom: 30px;
-              border-bottom: 2px solid #333;
-              padding-bottom: 10px;
+              margin-bottom: 15px;
+              border-bottom: 1px solid #333;
+              padding-bottom: 5px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 14pt;
+            }
+            .header h2 {
+              margin: 5px 0;
+              font-size: 12pt;
             }
             .info-section {
-              margin-bottom: 20px;
+              margin-bottom: 10px;
             }
             .info-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 10px;
-              margin-bottom: 20px;
+              gap: 5px;
+              margin-bottom: 10px;
             }
             .info-item {
-              padding: 5px;
+              padding: 3px;
             }
             .info-label {
               font-weight: bold;
+              font-size: 9pt;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 20px;
+              margin-bottom: 10px;
+              font-size: 9pt;
             }
             th, td {
               border: 1px solid #ddd;
-              padding: 8px;
+              padding: 4px;
               text-align: left;
             }
             th {
               background-color: #f5f5f5;
+              font-weight: bold;
             }
             .footer {
-              margin-top: 50px;
+              margin-top: 15px;
               text-align: center;
             }
             .signature-line {
-              margin-top: 100px;
+              margin-top: 30px;
               border-top: 1px solid #333;
               width: 200px;
               display: inline-block;
               text-align: center;
             }
+            .delivery-notes {
+              font-style: italic;
+              color: #666;
+              margin-top: 3px;
+              font-size: 8pt;
+            }
+            .copy-label {
+              text-align: right;
+              font-style: italic;
+              font-size: 8pt;
+              margin-bottom: 5px;
+            }
+            .page-break {
+              page-break-after: always;
+            }
             @media print {
               body { margin: 0; }
               .no-print { display: none; }
-              @page { margin: 2cm; }
+              .delivery-note {
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>ROMANEIO DE ENTREGA</h1>
-            <h2>Nº ${note.number}</h2>
-          </div>
+          <div class="page">
+            <!-- First Copy -->
+            <div class="copy-label">1ª VIA - EMPRESA</div>
+            <div class="delivery-note">
+              <div class="header">
+                <h1>ROMANEIO DE ENTREGA</h1>
+                <h2>Nº ${note.number}</h2>
+              </div>
 
-          <div class="info-section">
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">Data:</span>
-                <span>${new Date(note.date).toLocaleDateString()}</span>
+              <div class="info-section">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-label">Data:</span>
+                    <span>${new Date(note.date).toLocaleDateString()}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Status:</span>
+                    <span>${getStatusText(note.status)}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Veículo:</span>
+                    <span>${note.vehicle.plate} - ${note.vehicle.model}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Ajudante:</span>
+                    <span>${note.helper_name || 'Não informado'}</span>
+                  </div>
+                </div>
               </div>
-              <div class="info-item">
-                <span class="info-label">Status:</span>
-                <span>${getStatusText(note.status)}</span>
+
+              <div class="info-section">
+                <h3 style="margin: 5px 0; font-size: 11pt;">Entregas</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pedido</th>
+                      <th>Cliente</th>
+                      <th>Endereço de Entrega</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${orderDetails.map(item => `
+                      <tr>
+                        <td>${item.order.number}</td>
+                        <td>${item.order.customer.razao_social}</td>
+                        <td>
+                          ${item.formattedAddress}
+                          ${item.notes ? `<div class="delivery-notes">Obs: ${item.notes}</div>` : ''}
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
               </div>
-              <div class="info-item">
-                <span class="info-label">Veículo:</span>
-                <span>${note.vehicle.plate} - ${note.vehicle.model}</span>
+
+              <div class="info-section">
+                <p><strong>Observações:</strong></p>
+                <p>${note.notes || 'Nenhuma observação'}</p>
               </div>
-              <div class="info-item">
-                <span class="info-label">Rota:</span>
-                <span>${note.route.name}</span>
+
+              <div class="footer">
+                <div class="signature-line">
+                  <p>Assinatura do Motorista</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="info-section">
-            <h3>Entregas</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Seq.</th>
-                  <th>Pedido</th>
-                  <th>Cliente</th>
-                  <th>Endereço</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${note.items
-                  .sort((a, b) => a.delivery_sequence - b.delivery_sequence)
-                  .map(item => `
+            <!-- Second Copy -->
+            <div class="copy-label">2ª VIA - CLIENTE</div>
+            <div class="delivery-note">
+              <div class="header">
+                <h1>ROMANEIO DE ENTREGA</h1>
+                <h2>Nº ${note.number}</h2>
+              </div>
+
+              <div class="info-section">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-label">Data:</span>
+                    <span>${new Date(note.date).toLocaleDateString()}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Status:</span>
+                    <span>${getStatusText(note.status)}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Veículo:</span>
+                    <span>${note.vehicle.plate} - ${note.vehicle.model}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Ajudante:</span>
+                    <span>${note.helper_name || 'Não informado'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-section">
+                <h3 style="margin: 5px 0; font-size: 11pt;">Entregas</h3>
+                <table>
+                  <thead>
                     <tr>
-                      <td>${item.delivery_sequence}</td>
-                      <td>${item.order.number}</td>
-                      <td>${item.order.customer.razao_social}</td>
-                      <td>
-                        ${item.order.customer.endereco}, 
-                        ${item.order.customer.bairro}, 
-                        ${item.order.customer.cidade} - 
-                        ${item.order.customer.estado}
-                      </td>
+                      <th>Pedido</th>
+                      <th>Cliente</th>
+                      <th>Endereço de Entrega</th>
                     </tr>
-                  `).join('')}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    ${orderDetails.map(item => `
+                      <tr>
+                        <td>${item.order.number}</td>
+                        <td>${item.order.customer.razao_social}</td>
+                        <td>
+                          ${item.formattedAddress}
+                          ${item.notes ? `<div class="delivery-notes">Obs: ${item.notes}</div>` : ''}
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
 
-          <div class="info-section">
-            <p><strong>Observações:</strong></p>
-            <p>${note.notes || 'Nenhuma observação'}</p>
-          </div>
+              <div class="info-section">
+                <p><strong>Observações:</strong></p>
+                <p>${note.notes || 'Nenhuma observação'}</p>
+              </div>
 
-          <div class="footer">
-            <div class="signature-line">
-              <p>Assinatura do Motorista</p>
+              <div class="footer">
+                <div class="signature-line">
+                  <p>Assinatura do Motorista</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -289,15 +468,15 @@ export function DeliveryNotes() {
       printWindow.document.write(content);
       printWindow.document.close();
     } catch (error) {
-      console.error('Erro ao imprimir romaneio:', error);
-      alert('Erro ao gerar impressão do romaneio. Por favor, tente novamente.');
+      console.error('Erro ao gerar PDF do romaneio:', error);
+      alert('Erro ao gerar PDF do romaneio. Por favor, tente novamente.');
     }
   };
 
   const filteredNotes = deliveryNotes.filter(note =>
     note.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     note.vehicle?.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.route?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (note.helper_name && note.helper_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -348,7 +527,7 @@ export function DeliveryNotes() {
                   Número/Data
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Veículo/Rota
+                  Veículo/Ajudante
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -374,7 +553,7 @@ export function DeliveryNotes() {
                       {note.vehicle?.plate} - {note.vehicle?.model}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {note.route?.name}
+                      {note.helper_name || 'Sem ajudante'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -384,9 +563,9 @@ export function DeliveryNotes() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => printDeliveryNote(note.id)}
+                      onClick={() => generateDeliveryNotePDF(note.id)}
                       className="text-[#FF8A00] hover:text-[#FF8A00]/80 mr-3"
-                      title="Imprimir"
+                      title="Gerar PDF"
                     >
                       <FileText className="h-5 w-5" />
                     </button>
