@@ -41,6 +41,7 @@ interface OrderItem {
 
 interface DeliveryNoteItem {
   order_id: string;
+  payment_method?: string;
   delivery_address_street?: string;
   delivery_address_number?: string;
   delivery_address_complement?: string;
@@ -74,6 +75,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
 
   const [items, setItems] = useState<DeliveryNoteItem[]>([{
     order_id: '',
+    payment_method: '',
     delivery_address_street: '',
     delivery_address_number: '',
     delivery_address_complement: '',
@@ -107,6 +109,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
         });
         setItems([{
           order_id: '',
+          payment_method: '',
           delivery_address_street: '',
           delivery_address_number: '',
           delivery_address_complement: '',
@@ -139,11 +142,21 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       if (itemsError) throw itemsError;
 
       if (itemsData && itemsData.length > 0) {
-        const processedItems = itemsData.map(item => {
+        const processedItems = await Promise.all(itemsData.map(async (item) => {
+          // Get order payment method
+          const { data: orderData } = await supabase
+            .from('sales_orders')
+            .select('payment_method')
+            .eq('id', item.order_id)
+            .single();
+            
+          const paymentMethod = orderData?.payment_method || '';
+          
           // If we have structured address fields, use them
           if (item.delivery_address_street || item.delivery_address_city) {
             return {
               order_id: item.order_id,
+              payment_method: paymentMethod,
               delivery_address_street: item.delivery_address_street || '',
               delivery_address_number: item.delivery_address_number || '',
               delivery_address_complement: item.delivery_address_complement || '',
@@ -179,6 +192,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
               
               return {
                 order_id: item.order_id,
+                payment_method: paymentMethod,
                 delivery_address_street: street,
                 delivery_address_number: number,
                 delivery_address_complement: '',
@@ -191,6 +205,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
               // If parsing fails, just use the whole string as street
               return {
                 order_id: item.order_id,
+                payment_method: paymentMethod,
                 delivery_address_street: item.delivery_address,
                 delivery_address_number: '',
                 delivery_address_complement: '',
@@ -205,6 +220,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           else {
             return {
               order_id: item.order_id,
+              payment_method: paymentMethod,
               delivery_address_street: '',
               delivery_address_number: '',
               delivery_address_complement: '',
@@ -214,7 +230,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
               delivery_address_notes: '',
             };
           }
-        });
+        }));
         
         setItems(processedItems);
       }
@@ -321,6 +337,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
   const addItem = () => {
     setItems([...items, {
       order_id: '',
+      payment_method: '',
       delivery_address_street: '',
       delivery_address_number: '',
       delivery_address_complement: '',
@@ -363,6 +380,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
         
         newItems[index] = {
           ...newItems[index],
+          payment_method: selectedOrder.payment_method || '',
           delivery_address_street: street,
           delivery_address_number: number,
           delivery_address_neighborhood: bairro,
@@ -468,6 +486,20 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
 
       if (itemsError) throw itemsError;
 
+      // Update payment method for each order if provided
+      for (const item of items) {
+        if (item.payment_method) {
+          const { error: updateError } = await supabase
+            .from('sales_orders')
+            .update({ payment_method: item.payment_method })
+            .eq('id', item.order_id);
+            
+          if (updateError) {
+            console.error('Error updating payment method:', updateError);
+          }
+        }
+      }
+
       onSuccess();
       onClose();
     } catch (error) {
@@ -477,6 +509,19 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       setSaving(false);
     }
   };
+
+  // Payment method options
+  const paymentMethods = [
+    { value: '', label: 'Selecione uma forma de pagamento' },
+    { value: 'dinheiro', label: 'Dinheiro' },
+    { value: 'cartao_credito', label: 'Cartão de Crédito' },
+    { value: 'cartao_debito', label: 'Cartão de Débito' },
+    { value: 'pix', label: 'PIX' },
+    { value: 'boleto', label: 'Boleto Bancário' },
+    { value: 'transferencia', label: 'Transferência Bancária' },
+    { value: 'cheque', label: 'Cheque' },
+    { value: 'prazo', label: 'A Prazo' },
+  ];
 
   if (!isOpen) return null;
 
@@ -603,23 +648,42 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Pedido *
-                    </label>
-                    <select
-                      required
-                      value={item.order_id}
-                      onChange={(e) => updateItem(index, 'order_id', e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                    >
-                      <option value="">Selecione um pedido</option>
-                      {orders.map((order) => (
-                        <option key={order.id} value={order.id}>
-                          {order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Pedido *
+                      </label>
+                      <select
+                        required
+                        value={item.order_id}
+                        onChange={(e) => updateItem(index, 'order_id', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                      >
+                        <option value="">Selecione um pedido</option>
+                        {orders.map((order) => (
+                          <option key={order.id} value={order.id}>
+                            {order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Forma de Pagamento
+                      </label>
+                      <select
+                        value={item.payment_method || ''}
+                        onChange={(e) => updateItem(index, 'payment_method', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                      >
+                        {paymentMethods.map((method) => (
+                          <option key={method.value} value={method.value}>
+                            {method.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   
                   <div className="border-t border-gray-200 pt-4">

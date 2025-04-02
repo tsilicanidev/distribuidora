@@ -175,7 +175,8 @@ export function DeliveryNotes() {
             product:products(name, unit),
             quantity,
             unit_price,
-            total_price
+            total_price,
+            weight
           `)
           .eq('sales_order_id', order.id);
           
@@ -236,6 +237,24 @@ export function DeliveryNotes() {
         return;
       }
 
+      // Format payment method for display
+      const formatPaymentMethod = (method: string | null | undefined) => {
+        if (!method) return 'Não informado';
+        
+        const methods: Record<string, string> = {
+          'dinheiro': 'Dinheiro',
+          'cartao_credito': 'Cartão de Crédito',
+          'cartao_debito': 'Cartão de Débito',
+          'pix': 'PIX',
+          'boleto': 'Boleto Bancário',
+          'transferencia': 'Transferência Bancária',
+          'cheque': 'Cheque',
+          'prazo': 'A Prazo'
+        };
+        
+        return methods[method] || method;
+      };
+
       // Generate HTML content with two copies
       const content = `
         <!DOCTYPE html>
@@ -253,6 +272,7 @@ export function DeliveryNotes() {
               padding: 0;
               color: #333;
               font-size: 10pt;
+              line-height: 1.3;
             }
             .page {
               width: 100%;
@@ -262,29 +282,40 @@ export function DeliveryNotes() {
             .delivery-note {
               border: 1px solid #ccc;
               padding: 10px;
-              margin-bottom: 10px;
+              margin-bottom: 15px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              border-radius: 4px;
             }
             .header {
               text-align: center;
               margin-bottom: 15px;
-              border-bottom: 1px solid #333;
-              padding-bottom: 5px;
+              border-bottom: 2px solid #FF8A00;
+              padding-bottom: 10px;
+              color: #333;
             }
             .header h1 {
               margin: 0;
-              font-size: 14pt;
+              font-size: 16pt;
+              color: #FF8A00;
             }
             .header h2 {
               margin: 5px 0;
-              font-size: 12pt;
+              font-size: 14pt;
             }
             .info-section {
-              margin-bottom: 10px;
+              margin-bottom: 15px;
+            }
+            .info-section h3 {
+              margin: 5px 0;
+              font-size: 12pt;
+              color: #FF8A00;
+              border-bottom: 1px solid #eee;
+              padding-bottom: 3px;
             }
             .info-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 5px;
+              gap: 8px;
               margin-bottom: 10px;
             }
             .info-item {
@@ -293,6 +324,7 @@ export function DeliveryNotes() {
             .info-label {
               font-weight: bold;
               font-size: 9pt;
+              color: #666;
             }
             table {
               width: 100%;
@@ -302,23 +334,32 @@ export function DeliveryNotes() {
             }
             th, td {
               border: 1px solid #ddd;
-              padding: 4px;
+              padding: 6px;
               text-align: left;
             }
             th {
-              background-color: #f5f5f5;
+              background-color: #f8f8f8;
               font-weight: bold;
+              color: #555;
+            }
+            tr:nth-child(even) {
+              background-color: #f9f9f9;
+            }
+            tr:hover {
+              background-color: #f5f5f5;
             }
             .footer {
-              margin-top: 15px;
+              margin-top: 20px;
               text-align: center;
             }
             .signature-line {
-              margin-top: 30px;
+              margin-top: 40px;
               border-top: 1px solid #333;
               width: 200px;
               display: inline-block;
               text-align: center;
+              padding-top: 5px;
+              font-size: 9pt;
             }
             .delivery-notes {
               font-style: italic;
@@ -331,9 +372,34 @@ export function DeliveryNotes() {
               font-style: italic;
               font-size: 8pt;
               margin-bottom: 5px;
+              color: #666;
             }
             .page-break {
               page-break-after: always;
+            }
+            .company-info {
+              text-align: center;
+              margin-bottom: 10px;
+              font-size: 8pt;
+              color: #666;
+            }
+            .order-header {
+              background-color: #f0f0f0;
+              padding: 5px;
+              border-radius: 3px;
+              margin-bottom: 5px;
+              border-left: 3px solid #FF8A00;
+            }
+            .total-row {
+              font-weight: bold;
+              background-color: #f0f0f0;
+            }
+            .payment-info {
+              background-color: #f9f9f9;
+              padding: 5px;
+              border-radius: 3px;
+              margin-top: 5px;
+              border: 1px dashed #ddd;
             }
             @media print {
               body { margin: 0; }
@@ -341,6 +407,7 @@ export function DeliveryNotes() {
               .delivery-note {
                 border: 1px solid #ccc;
                 page-break-inside: avoid;
+                box-shadow: none;
               }
             }
           </style>
@@ -351,6 +418,10 @@ export function DeliveryNotes() {
             <div class="copy-label">1ª VIA - EMPRESA</div>
             <div class="delivery-note">
               <div class="header">
+                <div class="company-info">
+                  J&P DISTRIBUIDORA DE ALIMENTOS
+                  <br>CNPJ: 58.957.775/0001-30
+                </div>
                 <h1>ROMANEIO DE ENTREGA</h1>
                 <h2>Nº ${note.number}</h2>
               </div>
@@ -377,7 +448,7 @@ export function DeliveryNotes() {
               </div>
 
               <div class="info-section">
-                <h3 style="margin: 5px 0; font-size: 11pt;">Entregas</h3>
+                <h3>Entregas</h3>
                 <table>
                   <thead>
                     <tr>
@@ -405,24 +476,31 @@ export function DeliveryNotes() {
 
               ${orderDetails.map((item, index) => `
                 <div class="info-section">
-                  <h3 style="margin: 5px 0; font-size: 11pt;">Detalhes do Pedido ${item.order.number}</h3>
+                  <div class="order-header">
+                    <strong>Pedido ${item.order.number}</strong> - ${item.order.customer.razao_social}
+                  </div>
                   
                   <div class="info-grid">
-                    <div class="info-item">
-                      <span class="info-label">Cliente:</span>
-                      <span>${item.order.customer.razao_social}</span>
-                    </div>
                     <div class="info-item">
                       <span class="info-label">Vendedor:</span>
                       <span>${item.order.seller?.full_name || 'N/A'}</span>
                     </div>
                     <div class="info-item">
-                      <span class="info-label">Forma de Pagamento:</span>
-                      <span>${item.order.payment_method || 'Não informado'}</span>
+                      <span class="info-label">Total do Pedido:</span>
+                      <span>R$ ${item.order.total_amount.toFixed(2)}</span>
                     </div>
-                    <div class="info-item">
-                      <span class="info-label">Data de Vencimento:</span>
-                      <span>${item.order.due_date ? new Date(item.order.due_date).toLocaleDateString() : 'Não informado'}</span>
+                  </div>
+                  
+                  <div class="payment-info">
+                    <div class="info-grid">
+                      <div class="info-item">
+                        <span class="info-label">Forma de Pagamento:</span>
+                        <span>${formatPaymentMethod(item.order.payment_method)}</span>
+                      </div>
+                      <div class="info-item">
+                        <span class="info-label">Data de Vencimento:</span>
+                        <span>${item.order.due_date ? new Date(item.order.due_date).toLocaleDateString() : 'Não informado'}</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -430,27 +508,27 @@ export function DeliveryNotes() {
                     <thead>
                       <tr>
                         <th>Produto</th>
-                        <th>Quantidade</th>
-                        <th>Unidade</th>
-                        <th>Peso</th>
-                        <th>Valor Unit.</th>
-                        <th>Valor Total</th>
+                        <th style="width: 60px; text-align: center;">Qtd</th>
+                        <th style="width: 60px; text-align: center;">Unid.</th>
+                        <th style="width: 60px; text-align: center;">Peso</th>
+                        <th style="width: 80px; text-align: right;">Valor Unit.</th>
+                        <th style="width: 80px; text-align: right;">Valor Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       ${item.items.map(orderItem => `
                         <tr>
                           <td>${orderItem.product.name}</td>
-                          <td>${orderItem.quantity}</td>
-                          <td>${orderItem.product.unit || 'UN'}</td>
-                          <td>${orderItem.weight || '-'}</td>
-                          <td>R$ ${orderItem.unit_price.toFixed(2)}</td>
-                          <td>R$ ${orderItem.total_price.toFixed(2)}</td>
+                          <td style="text-align: center;">${orderItem.quantity}</td>
+                          <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
+                          <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) : '-'}</td>
+                          <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
+                          <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
                         </tr>
                       `).join('')}
-                      <tr>
+                      <tr class="total-row">
                         <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
-                        <td><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
+                        <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
                       </tr>
                     </tbody>
                   </table>
@@ -458,7 +536,7 @@ export function DeliveryNotes() {
               `).join('')}
 
               <div class="info-section">
-                <p><strong>Observações:</strong></p>
+                <h3>Observações</h3>
                 <p>${note.notes || 'Nenhuma observação'}</p>
               </div>
 
@@ -473,6 +551,10 @@ export function DeliveryNotes() {
             <div class="copy-label">2ª VIA - CLIENTE</div>
             <div class="delivery-note">
               <div class="header">
+                <div class="company-info">
+                  J&P DISTRIBUIDORA DE ALIMENTOS
+                  <br>CNPJ: 58.957.775/0001-30
+                </div>
                 <h1>ROMANEIO DE ENTREGA</h1>
                 <h2>Nº ${note.number}</h2>
               </div>
@@ -499,7 +581,7 @@ export function DeliveryNotes() {
               </div>
 
               <div class="info-section">
-                <h3 style="margin: 5px 0; font-size: 11pt;">Entregas</h3>
+                <h3>Entregas</h3>
                 <table>
                   <thead>
                     <tr>
@@ -527,24 +609,31 @@ export function DeliveryNotes() {
 
               ${orderDetails.map((item, index) => `
                 <div class="info-section">
-                  <h3 style="margin: 5px 0; font-size: 11pt;">Detalhes do Pedido ${item.order.number}</h3>
+                  <div class="order-header">
+                    <strong>Pedido ${item.order.number}</strong> - ${item.order.customer.razao_social}
+                  </div>
                   
                   <div class="info-grid">
-                    <div class="info-item">
-                      <span class="info-label">Cliente:</span>
-                      <span>${item.order.customer.razao_social}</span>
-                    </div>
                     <div class="info-item">
                       <span class="info-label">Vendedor:</span>
                       <span>${item.order.seller?.full_name || 'N/A'}</span>
                     </div>
                     <div class="info-item">
-                      <span class="info-label">Forma de Pagamento:</span>
-                      <span>${item.order.payment_method || 'Não informado'}</span>
+                      <span class="info-label">Total do Pedido:</span>
+                      <span>R$ ${item.order.total_amount.toFixed(2)}</span>
                     </div>
-                    <div class="info-item">
-                      <span class="info-label">Data de Vencimento:</span>
-                      <span>${item.order.due_date ? new Date(item.order.due_date).toLocaleDateString() : 'Não informado'}</span>
+                  </div>
+                  
+                  <div class="payment-info">
+                    <div class="info-grid">
+                      <div class="info-item">
+                        <span class="info-label">Forma de Pagamento:</span>
+                        <span>${formatPaymentMethod(item.order.payment_method)}</span>
+                      </div>
+                      <div class="info-item">
+                        <span class="info-label">Data de Vencimento:</span>
+                        <span>${item.order.due_date ? new Date(item.order.due_date).toLocaleDateString() : 'Não informado'}</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -552,27 +641,27 @@ export function DeliveryNotes() {
                     <thead>
                       <tr>
                         <th>Produto</th>
-                        <th>Quantidade</th>
-                        <th>Unidade</th>
-                        <th>Peso</th>
-                        <th>Valor Unit.</th>
-                        <th>Valor Total</th>
+                        <th style="width: 60px; text-align: center;">Qtd</th>
+                        <th style="width: 60px; text-align: center;">Unid.</th>
+                        <th style="width: 60px; text-align: center;">Peso</th>
+                        <th style="width: 80px; text-align: right;">Valor Unit.</th>
+                        <th style="width: 80px; text-align: right;">Valor Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       ${item.items.map(orderItem => `
                         <tr>
                           <td>${orderItem.product.name}</td>
-                          <td>${orderItem.quantity}</td>
-                          <td>${orderItem.product.unit || 'UN'}</td>
-                          <td>${orderItem.weight || '-'}</td>
-                          <td>R$ ${orderItem.unit_price.toFixed(2)}</td>
-                          <td>R$ ${orderItem.total_price.toFixed(2)}</td>
+                          <td style="text-align: center;">${orderItem.quantity}</td>
+                          <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
+                          <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) : '-'}</td>
+                          <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
+                          <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
                         </tr>
                       `).join('')}
-                      <tr>
+                      <tr class="total-row">
                         <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
-                        <td><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
+                        <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
                       </tr>
                     </tbody>
                   </table>
@@ -580,20 +669,20 @@ export function DeliveryNotes() {
               `).join('')}
 
               <div class="info-section">
-                <p><strong>Observações:</strong></p>
+                <h3>Observações</h3>
                 <p>${note.notes || 'Nenhuma observação'}</p>
               </div>
 
               <div class="footer">
                 <div class="signature-line">
-                  <p>Assinatura do Motorista</p>
+                  <p>Assinatura do Cliente</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="no-print" style="margin-top: 20px; text-align: center;">
-            <button onclick="window.print()" style="padding: 10px 20px; background: #FF8A00; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #FF8A00; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
               Imprimir Romaneio
             </button>
           </div>
