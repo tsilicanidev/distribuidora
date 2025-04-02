@@ -18,7 +18,25 @@ interface Order {
     cidade: string;
     estado: string;
   };
+  seller: {
+    full_name: string;
+  };
   total_amount: number;
+  items?: OrderItem[];
+  payment_method?: string;
+  due_date?: string;
+}
+
+interface OrderItem {
+  product_id: string;
+  product: {
+    name: string;
+    unit: string;
+  };
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  weight?: number;
 }
 
 interface DeliveryNoteItem {
@@ -224,7 +242,10 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           id,
           number,
           customer:customers(razao_social, endereco, bairro, cidade, estado),
-          total_amount
+          seller:profiles(full_name),
+          total_amount,
+          payment_method,
+          due_date
         `)
         .eq('status', 'approved') // Changed from 'completed' to 'approved'
         .order('created_at', { ascending: false });
@@ -265,7 +286,29 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       const { data: ordersData, error: ordersError } = await query;
 
       if (ordersError) throw ordersError;
-      setOrders(ordersData || []);
+      
+      // Fetch order items for each order
+      const ordersWithItems = await Promise.all((ordersData || []).map(async (order) => {
+        const { data: items, error: itemsError } = await supabase
+          .from('sales_order_items')
+          .select(`
+            product_id,
+            product:products(name, unit),
+            quantity,
+            unit_price,
+            total_price
+          `)
+          .eq('sales_order_id', order.id);
+          
+        if (itemsError) throw itemsError;
+        
+        return {
+          ...order,
+          items: items || []
+        };
+      }));
+      
+      setOrders(ordersWithItems || []);
       setError(null);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);

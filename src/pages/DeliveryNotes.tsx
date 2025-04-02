@@ -16,6 +16,17 @@ interface DeliveryNote {
   created_at: string;
 }
 
+interface OrderItem {
+  product: {
+    name: string;
+    unit: string;
+  };
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  weight?: number;
+}
+
 export function DeliveryNotes() {
   const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,22 +151,35 @@ export function DeliveryNotes() {
       // Fetch order details for each item
       const orderDetails = [];
       for (const item of items || []) {
+        // Get order details
         const { data: order, error: orderError } = await supabase
           .from('sales_orders')
           .select(`
+            id,
             number,
-            customer:customers(
-              razao_social,
-              endereco,
-              bairro,
-              cidade,
-              estado
-            )
+            customer:customers(razao_social, endereco, bairro, cidade, estado),
+            seller:profiles(full_name),
+            total_amount,
+            payment_method,
+            due_date
           `)
           .eq('id', item.order_id)
           .single();
 
         if (orderError) throw orderError;
+        
+        // Get order items
+        const { data: orderItems, error: orderItemsError } = await supabase
+          .from('sales_order_items')
+          .select(`
+            product:products(name, unit),
+            quantity,
+            unit_price,
+            total_price
+          `)
+          .eq('sales_order_id', order.id);
+          
+        if (orderItemsError) throw orderItemsError;
         
         // Format address from components if available
         let formattedAddress = '';
@@ -199,6 +223,7 @@ export function DeliveryNotes() {
         
         orderDetails.push({
           order: order,
+          items: orderItems || [],
           formattedAddress: formattedAddress,
           notes: item.delivery_address_notes
         });
@@ -358,6 +383,7 @@ export function DeliveryNotes() {
                     <tr>
                       <th>Pedido</th>
                       <th>Cliente</th>
+                      <th>Vendedor</th>
                       <th>Endereço de Entrega</th>
                     </tr>
                   </thead>
@@ -366,6 +392,7 @@ export function DeliveryNotes() {
                       <tr>
                         <td>${item.order.number}</td>
                         <td>${item.order.customer.razao_social}</td>
+                        <td>${item.order.seller?.full_name || 'N/A'}</td>
                         <td>
                           ${item.formattedAddress}
                           ${item.notes ? `<div class="delivery-notes">Obs: ${item.notes}</div>` : ''}
@@ -375,6 +402,60 @@ export function DeliveryNotes() {
                   </tbody>
                 </table>
               </div>
+
+              ${orderDetails.map((item, index) => `
+                <div class="info-section">
+                  <h3 style="margin: 5px 0; font-size: 11pt;">Detalhes do Pedido ${item.order.number}</h3>
+                  
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <span class="info-label">Cliente:</span>
+                      <span>${item.order.customer.razao_social}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Vendedor:</span>
+                      <span>${item.order.seller?.full_name || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Forma de Pagamento:</span>
+                      <span>${item.order.payment_method || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Data de Vencimento:</span>
+                      <span>${item.order.due_date ? new Date(item.order.due_date).toLocaleDateString() : 'Não informado'}</span>
+                    </div>
+                  </div>
+                  
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Unidade</th>
+                        <th>Peso</th>
+                        <th>Valor Unit.</th>
+                        <th>Valor Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${item.items.map(orderItem => `
+                        <tr>
+                          <td>${orderItem.product.name}</td>
+                          <td>${orderItem.quantity}</td>
+                          <td>${orderItem.product.unit || 'UN'}</td>
+                          <td>${orderItem.weight || '-'}</td>
+                          <td>R$ ${orderItem.unit_price.toFixed(2)}</td>
+                          <td>R$ ${orderItem.total_price.toFixed(2)}</td>
+                        </tr>
+                      `).join('')}
+                      <tr>
+                        <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
+                        <td><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              `).join('')}
 
               <div class="info-section">
                 <p><strong>Observações:</strong></p>
@@ -424,6 +505,7 @@ export function DeliveryNotes() {
                     <tr>
                       <th>Pedido</th>
                       <th>Cliente</th>
+                      <th>Vendedor</th>
                       <th>Endereço de Entrega</th>
                     </tr>
                   </thead>
@@ -432,6 +514,7 @@ export function DeliveryNotes() {
                       <tr>
                         <td>${item.order.number}</td>
                         <td>${item.order.customer.razao_social}</td>
+                        <td>${item.order.seller?.full_name || 'N/A'}</td>
                         <td>
                           ${item.formattedAddress}
                           ${item.notes ? `<div class="delivery-notes">Obs: ${item.notes}</div>` : ''}
@@ -441,6 +524,60 @@ export function DeliveryNotes() {
                   </tbody>
                 </table>
               </div>
+
+              ${orderDetails.map((item, index) => `
+                <div class="info-section">
+                  <h3 style="margin: 5px 0; font-size: 11pt;">Detalhes do Pedido ${item.order.number}</h3>
+                  
+                  <div class="info-grid">
+                    <div class="info-item">
+                      <span class="info-label">Cliente:</span>
+                      <span>${item.order.customer.razao_social}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Vendedor:</span>
+                      <span>${item.order.seller?.full_name || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Forma de Pagamento:</span>
+                      <span>${item.order.payment_method || 'Não informado'}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Data de Vencimento:</span>
+                      <span>${item.order.due_date ? new Date(item.order.due_date).toLocaleDateString() : 'Não informado'}</span>
+                    </div>
+                  </div>
+                  
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Unidade</th>
+                        <th>Peso</th>
+                        <th>Valor Unit.</th>
+                        <th>Valor Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${item.items.map(orderItem => `
+                        <tr>
+                          <td>${orderItem.product.name}</td>
+                          <td>${orderItem.quantity}</td>
+                          <td>${orderItem.product.unit || 'UN'}</td>
+                          <td>${orderItem.weight || '-'}</td>
+                          <td>R$ ${orderItem.unit_price.toFixed(2)}</td>
+                          <td>R$ ${orderItem.total_price.toFixed(2)}</td>
+                        </tr>
+                      `).join('')}
+                      <tr>
+                        <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
+                        <td><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              `).join('')}
 
               <div class="info-section">
                 <p><strong>Observações:</strong></p>
