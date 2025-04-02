@@ -24,7 +24,7 @@ export default function Settings() {
     password: '',
     full_name: '',
     role: 'seller',
-    commission_rate: 5, // Default commission rate
+    commission_rate: 5,
   });
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,15 +51,32 @@ export default function Settings() {
         .from('commission_rates')
         .select('*');
 
-      if (ratesError) throw ratesError;
+      if (ratesError) {
+        console.error('Error fetching commission rates:', ratesError);
+      }
 
       // Combine profiles with commission rates
-      const usersWithCommission = profiles.map(profile => ({
-        ...profile,
-        commission_rate: profile.role === 'seller' 
-          ? commissionRates?.find(rate => rate.user_id === profile.id)?.rate || 5
-          : undefined
-      }));
+      const usersWithCommission = profiles?.map(profile => {
+        let commissionRate;
+        
+        // If this is a seller, try to find their commission rate
+        if (profile.role === 'seller') {
+          // First check for user-specific rate
+          const userRate = commissionRates?.find(rate => rate.user_id === profile.id);
+          if (userRate) {
+            commissionRate = userRate.rate;
+          } else {
+            // Fall back to default rate for the role
+            const defaultRate = commissionRates?.find(rate => rate.role === 'seller' && !rate.user_id);
+            commissionRate = defaultRate?.rate || 5; // Default to 5% if no rate found
+          }
+        }
+        
+        return {
+          ...profile,
+          commission_rate: commissionRate
+        };
+      });
 
       setUsers(usersWithCommission || []);
       setError(null);
@@ -119,6 +136,7 @@ export default function Settings() {
             .from('commission_rates')
             .insert([{
               user_id: authData.user.id,
+              role: 'seller',
               rate: formData.commission_rate
             }]);
 
@@ -228,14 +246,38 @@ export default function Settings() {
 
   const handleCommissionRateChange = async (userId: string, newRate: number) => {
     try {
-      const { error } = await supabase
+      // Check if a commission rate already exists for this user
+      const { data: existingRates, error: checkError } = await supabase
         .from('commission_rates')
-        .upsert([{
-          user_id: userId,
-          rate: newRate
-        }]);
-
-      if (error) throw error;
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (checkError) throw checkError;
+      
+      let updateError;
+      
+      if (existingRates && existingRates.length > 0) {
+        // Update existing rate
+        const { error } = await supabase
+          .from('commission_rates')
+          .update({ rate: newRate })
+          .eq('user_id', userId);
+          
+        updateError = error;
+      } else {
+        // Insert new rate
+        const { error } = await supabase
+          .from('commission_rates')
+          .insert([{ 
+            user_id: userId,
+            role: 'seller',
+            rate: newRate 
+          }]);
+          
+        updateError = error;
+      }
+      
+      if (updateError) throw updateError;
 
       // Update local state
       setUsers(users.map(user => 
@@ -588,4 +630,4 @@ export default function Settings() {
   );
 }
 
-export { Settings };
+export { Settings }
