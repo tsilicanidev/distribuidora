@@ -8,47 +8,28 @@ interface Vehicle {
   model: string;
 }
 
+interface Route {
+  id: string;
+  name: string;
+}
+
 interface Order {
   id: string;
   number: string;
   customer: {
     razao_social: string;
     endereco: string;
-    bairro: string;
-    cidade: string;
-    estado: string;
-  };
-  seller: {
-    full_name: string;
   };
   total_amount: number;
-  items?: OrderItem[];
   payment_method?: string;
   due_date?: string;
 }
 
-interface OrderItem {
-  product_id: string;
-  product: {
-    name: string;
-    unit: string;
-  };
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  weight?: number;
-}
-
 interface DeliveryNoteItem {
   order_id: string;
+  delivery_sequence: number;
   payment_method?: string;
-  delivery_address_street?: string;
-  delivery_address_number?: string;
-  delivery_address_complement?: string;
-  delivery_address_neighborhood?: string;
-  delivery_address_city?: string;
-  delivery_address_state?: string;
-  delivery_address_notes?: string;
+  due_date?: string;
 }
 
 interface DeliveryNoteModalProps {
@@ -60,6 +41,7 @@ interface DeliveryNoteModalProps {
 
 export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: DeliveryNoteModalProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,20 +51,16 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
     number: '',
     date: new Date().toISOString().split('T')[0],
     vehicle_id: '',
+    route_id: '',
     helper_name: '',
     notes: '',
   });
 
   const [items, setItems] = useState<DeliveryNoteItem[]>([{
     order_id: '',
+    delivery_sequence: 1,
     payment_method: '',
-    delivery_address_street: '',
-    delivery_address_number: '',
-    delivery_address_complement: '',
-    delivery_address_neighborhood: '',
-    delivery_address_city: '',
-    delivery_address_state: '',
-    delivery_address_notes: '',
+    due_date: '',
   }]);
 
   useEffect(() => {
@@ -93,30 +71,36 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           number: deliveryNote.number,
           date: deliveryNote.date,
           vehicle_id: deliveryNote.vehicle_id,
+          route_id: deliveryNote.route_id || '',
           helper_name: deliveryNote.helper_name || '',
           notes: deliveryNote.notes || '',
         });
         // Load delivery note items if editing
-        fetchDeliveryNoteItems(deliveryNote.id);
+        if (deliveryNote.items) {
+          setItems(deliveryNote.items.map((item: any) => ({
+            order_id: item.order_id,
+            delivery_sequence: item.delivery_sequence,
+            payment_method: item.payment_method || '',
+            due_date: item.due_date || '',
+          })));
+        } else {
+          fetchDeliveryNoteItems(deliveryNote.id);
+        }
       } else {
         // Reset form for new delivery note
         setFormData({
           number: '',
           date: new Date().toISOString().split('T')[0],
           vehicle_id: '',
+          route_id: '',
           helper_name: '',
           notes: '',
         });
         setItems([{
           order_id: '',
+          delivery_sequence: 1,
           payment_method: '',
-          delivery_address_street: '',
-          delivery_address_number: '',
-          delivery_address_complement: '',
-          delivery_address_neighborhood: '',
-          delivery_address_city: '',
-          delivery_address_state: '',
-          delivery_address_notes: '',
+          due_date: '',
         }]);
       }
     }
@@ -126,113 +110,37 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
     try {
       const { data: itemsData, error: itemsError } = await supabase
         .from('delivery_note_items')
-        .select(`
-          order_id,
-          delivery_address,
-          delivery_address_street,
-          delivery_address_number,
-          delivery_address_complement,
-          delivery_address_neighborhood,
-          delivery_address_city,
-          delivery_address_state,
-          delivery_address_notes
-        `)
+        .select('order_id, delivery_sequence')
         .eq('delivery_note_id', deliveryNoteId);
 
       if (itemsError) throw itemsError;
 
       if (itemsData && itemsData.length > 0) {
-        const processedItems = await Promise.all(itemsData.map(async (item) => {
-          // Get order payment method
-          const { data: orderData } = await supabase
+        // Fetch payment methods for each order
+        const itemsWithPaymentMethods = await Promise.all(itemsData.map(async (item) => {
+          const { data: orderData, error: orderError } = await supabase
             .from('sales_orders')
-            .select('payment_method')
+            .select('payment_method, due_date')
             .eq('id', item.order_id)
             .single();
-            
-          const paymentMethod = orderData?.payment_method || '';
-          
-          // If we have structured address fields, use them
-          if (item.delivery_address_street || item.delivery_address_city) {
+
+          if (orderError) {
+            console.error('Error fetching order payment method:', orderError);
             return {
-              order_id: item.order_id,
-              payment_method: paymentMethod,
-              delivery_address_street: item.delivery_address_street || '',
-              delivery_address_number: item.delivery_address_number || '',
-              delivery_address_complement: item.delivery_address_complement || '',
-              delivery_address_neighborhood: item.delivery_address_neighborhood || '',
-              delivery_address_city: item.delivery_address_city || '',
-              delivery_address_state: item.delivery_address_state || '',
-              delivery_address_notes: item.delivery_address_notes || '',
-            };
-          } 
-          // Otherwise try to parse from delivery_address
-          else if (item.delivery_address) {
-            try {
-              // Try to parse existing address into components
-              const addressParts = item.delivery_address.split(',');
-              let street = '', number = '', neighborhood = '', city = '', state = '';
-              
-              if (addressParts.length >= 1) {
-                const streetParts = addressParts[0].trim().split(' ');
-                // Assume last part is number if it's numeric
-                if (streetParts.length > 1 && /^\d+$/.test(streetParts[streetParts.length - 1])) {
-                  number = streetParts.pop() || '';
-                  street = streetParts.join(' ');
-                } else {
-                  street = addressParts[0].trim();
-                }
-              }
-              if (addressParts.length >= 2) neighborhood = addressParts[1].trim();
-              if (addressParts.length >= 3) {
-                const cityState = addressParts[2].trim().split('-');
-                city = cityState[0].trim();
-                if (cityState.length > 1) state = cityState[1].trim();
-              }
-              
-              return {
-                order_id: item.order_id,
-                payment_method: paymentMethod,
-                delivery_address_street: street,
-                delivery_address_number: number,
-                delivery_address_complement: '',
-                delivery_address_neighborhood: neighborhood,
-                delivery_address_city: city,
-                delivery_address_state: state,
-                delivery_address_notes: '',
-              };
-            } catch (e) {
-              // If parsing fails, just use the whole string as street
-              return {
-                order_id: item.order_id,
-                payment_method: paymentMethod,
-                delivery_address_street: item.delivery_address,
-                delivery_address_number: '',
-                delivery_address_complement: '',
-                delivery_address_neighborhood: '',
-                delivery_address_city: '',
-                delivery_address_state: '',
-                delivery_address_notes: '',
-              };
-            }
-          } 
-          // Fallback to empty fields
-          else {
-            return {
-              order_id: item.order_id,
-              payment_method: paymentMethod,
-              delivery_address_street: '',
-              delivery_address_number: '',
-              delivery_address_complement: '',
-              delivery_address_neighborhood: '',
-              delivery_address_city: '',
-              delivery_address_state: '',
-              delivery_address_notes: '',
+              ...item,
+              payment_method: '',
+              due_date: '',
             };
           }
+
+          return {
+            ...item,
+            payment_method: orderData?.payment_method || '',
+            due_date: orderData?.due_date || '',
+          };
         }));
-        
-        setItems(processedItems);
+
+        setItems(itemsWithPaymentMethods);
       }
     } catch (error) {
       console.error('Error fetching delivery note items:', error);
@@ -242,14 +150,20 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
 
   async function fetchData() {
     try {
-      // Get vehicles first
-      const { data: vehiclesData, error: vehiclesError } = await supabase
-        .from('vehicles')
-        .select('*')
-        .eq('status', 'available');
+      // Get vehicles and routes first
+      const [
+        { data: vehiclesData, error: vehiclesError },
+        { data: routesData, error: routesError }
+      ] = await Promise.all([
+        supabase.from('vehicles').select('*').eq('status', 'available'),
+        supabase.from('delivery_routes').select('*')
+      ]);
 
       if (vehiclesError) throw vehiclesError;
+      if (routesError) throw routesError;
+
       setVehicles(vehiclesData || []);
+      setRoutes(routesData || []);
 
       // Get orders that are approved and not in any delivery note or are in the current delivery note
       let query = supabase
@@ -257,8 +171,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
         .select(`
           id,
           number,
-          customer:customers(razao_social, endereco, bairro, cidade, estado),
-          seller:profiles(full_name),
+          customer:customers(razao_social, endereco),
           total_amount,
           payment_method,
           due_date
@@ -282,9 +195,10 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           .not('delivery_note_id', 'eq', deliveryNote.id);
         
         const excludedOrderIds = otherDeliveryItems?.map(item => item.order_id) || [];
+        const filteredExcludedOrderIds = excludedOrderIds.filter(id => !includedOrderIds.includes(id));
         
-        if (excludedOrderIds.length > 0) {
-          query = query.not('id', 'in', `(${excludedOrderIds.join(',')})`);
+        if (filteredExcludedOrderIds.length > 0) {
+          query = query.not('id', 'in', `(${filteredExcludedOrderIds.join(',')})`);
         }
       } else {
         // For new delivery notes, exclude orders that are already in other delivery notes
@@ -302,29 +216,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       const { data: ordersData, error: ordersError } = await query;
 
       if (ordersError) throw ordersError;
-      
-      // Fetch order items for each order
-      const ordersWithItems = await Promise.all((ordersData || []).map(async (order) => {
-        const { data: items, error: itemsError } = await supabase
-          .from('sales_order_items')
-          .select(`
-            product_id,
-            product:products(name, unit),
-            quantity,
-            unit_price,
-            total_price
-          `)
-          .eq('sales_order_id', order.id);
-          
-        if (itemsError) throw itemsError;
-        
-        return {
-          ...order,
-          items: items || []
-        };
-      }));
-      
-      setOrders(ordersWithItems || []);
+      setOrders(ordersData || []);
       setError(null);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
@@ -337,21 +229,20 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
   const addItem = () => {
     setItems([...items, {
       order_id: '',
+      delivery_sequence: items.length + 1,
       payment_method: '',
-      delivery_address_street: '',
-      delivery_address_number: '',
-      delivery_address_complement: '',
-      delivery_address_neighborhood: '',
-      delivery_address_city: '',
-      delivery_address_state: '',
-      delivery_address_notes: '',
+      due_date: '',
     }]);
   };
 
   const removeItem = (index: number) => {
     if (items.length === 1) return;
     const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
+    // Update delivery sequence
+    setItems(newItems.map((item, i) => ({
+      ...item,
+      delivery_sequence: i + 1
+    })));
   };
 
   const updateItem = (index: number, field: keyof DeliveryNoteItem, value: any) => {
@@ -361,31 +252,14 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       [field]: value
     };
     
-    // If order_id changes, pre-fill the delivery address fields with customer address
+    // If order_id changes, pre-fill payment method if available
     if (field === 'order_id' && value) {
       const selectedOrder = orders.find(order => order.id === value);
-      if (selectedOrder && selectedOrder.customer) {
-        const { endereco, bairro, cidade, estado } = selectedOrder.customer;
-        
-        // Try to extract street number from address
-        let street = endereco;
-        let number = '';
-        
-        // Simple heuristic: if the last part is numeric, it's probably the number
-        const parts = endereco.trim().split(' ');
-        if (parts.length > 1 && /^\d+$/.test(parts[parts.length - 1])) {
-          number = parts.pop() || '';
-          street = parts.join(' ');
-        }
-        
+      if (selectedOrder) {
         newItems[index] = {
           ...newItems[index],
           payment_method: selectedOrder.payment_method || '',
-          delivery_address_street: street,
-          delivery_address_number: number,
-          delivery_address_neighborhood: bairro,
-          delivery_address_city: cidade,
-          delivery_address_state: estado,
+          due_date: selectedOrder.due_date || '',
         };
       }
     }
@@ -418,7 +292,6 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       // Create or update delivery note
       const noteData = {
         ...formData,
-        route_id: null, // Set route_id to null since we're not using it anymore
         created_by: (await supabase.auth.getUser()).data.user?.id
       };
 
@@ -446,43 +319,16 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
         deliveryNoteId = note.id;
       }
 
-      // Process items to create delivery_address string and save structured fields
-      const processedItems = items.map(item => {
-        // Combine address fields into a single string for backward compatibility
-        const addressParts = [];
-        if (item.delivery_address_street) {
-          let streetNumber = item.delivery_address_street;
-          if (item.delivery_address_number) streetNumber += ` ${item.delivery_address_number}`;
-          addressParts.push(streetNumber);
-        }
-        if (item.delivery_address_neighborhood) addressParts.push(item.delivery_address_neighborhood);
-        if (item.delivery_address_city) {
-          let cityState = item.delivery_address_city;
-          if (item.delivery_address_state) cityState += ` - ${item.delivery_address_state}`;
-          addressParts.push(cityState);
-        }
-        
-        const deliveryAddress = addressParts.join(', ');
-        
-        return {
-          delivery_note_id: deliveryNoteId,
-          order_id: item.order_id,
-          delivery_sequence: 0, // We're not using sequence anymore
-          delivery_address: deliveryAddress,
-          delivery_address_street: item.delivery_address_street,
-          delivery_address_number: item.delivery_address_number,
-          delivery_address_complement: item.delivery_address_complement,
-          delivery_address_neighborhood: item.delivery_address_neighborhood,
-          delivery_address_city: item.delivery_address_city,
-          delivery_address_state: item.delivery_address_state,
-          delivery_address_notes: item.delivery_address_notes
-        };
-      });
-
       // Create delivery note items
       const { error: itemsError } = await supabase
         .from('delivery_note_items')
-        .insert(processedItems);
+        .insert(
+          items.map(item => ({
+            delivery_note_id: deliveryNoteId,
+            order_id: item.order_id,
+            delivery_sequence: item.delivery_sequence
+          }))
+        );
 
       if (itemsError) throw itemsError;
 
@@ -491,7 +337,10 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
         if (item.payment_method) {
           const { error: updateError } = await supabase
             .from('sales_orders')
-            .update({ payment_method: item.payment_method })
+            .update({ 
+              payment_method: item.payment_method,
+              due_date: item.due_date || null
+            })
             .eq('id', item.order_id);
             
           if (updateError) {
@@ -596,6 +445,24 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
+                Rota
+              </label>
+              <select
+                value={formData.route_id}
+                onChange={(e) => setFormData({ ...formData, route_id: e.target.value })}
+                className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+              >
+                <option value="">Selecione uma rota (opcional)</option>
+                {routes.map((route) => (
+                  <option key={route.id} value={route.id}>
+                    {route.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
                 Ajudante
               </label>
               <input
@@ -634,154 +501,64 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
             </div>
 
             {items.map((item, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-md font-medium text-gray-900">Pedido {index + 1}</h4>
+              <div key={index} className="grid grid-cols-12 gap-4 items-end border-b border-gray-200 pb-4">
+                <div className="col-span-5">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pedido *
+                  </label>
+                  <select
+                    required
+                    value={item.order_id}
+                    onChange={(e) => updateItem(index, 'order_id', e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                  >
+                    <option value="">Selecione um pedido</option>
+                    {orders.map((order) => (
+                      <option key={order.id} value={order.id}>
+                        {order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="col-span-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Forma de Pagamento
+                  </label>
+                  <select
+                    value={item.payment_method || ''}
+                    onChange={(e) => updateItem(index, 'payment_method', e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                  >
+                    {paymentMethods.map((method) => (
+                      <option key={method.value} value={method.value}>
+                        {method.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="col-span-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Data de Vencimento
+                  </label>
+                  <input
+                    type="date"
+                    value={item.due_date || ''}
+                    onChange={(e) => updateItem(index, 'due_date', e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                  />
+                </div>
+
+                <div className="col-span-1">
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
-                    className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
+                    className="w-full px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
                     disabled={items.length === 1}
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Pedido *
-                      </label>
-                      <select
-                        required
-                        value={item.order_id}
-                        onChange={(e) => updateItem(index, 'order_id', e.target.value)}
-                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                      >
-                        <option value="">Selecione um pedido</option>
-                        {orders.map((order) => (
-                          <option key={order.id} value={order.id}>
-                            {order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Forma de Pagamento
-                      </label>
-                      <select
-                        value={item.payment_method || ''}
-                        onChange={(e) => updateItem(index, 'payment_method', e.target.value)}
-                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                      >
-                        {paymentMethods.map((method) => (
-                          <option key={method.value} value={method.value}>
-                            {method.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div className="border-t border-gray-200 pt-4">
-                    <h5 className="text-sm font-medium text-gray-700 mb-3">Endereço de Entrega</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Rua
-                        </label>
-                        <input
-                          type="text"
-                          value={item.delivery_address_street || ''}
-                          onChange={(e) => updateItem(index, 'delivery_address_street', e.target.value)}
-                          className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                          placeholder="Rua"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Número
-                        </label>
-                        <input
-                          type="text"
-                          value={item.delivery_address_number || ''}
-                          onChange={(e) => updateItem(index, 'delivery_address_number', e.target.value)}
-                          className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                          placeholder="Número"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Complemento
-                        </label>
-                        <input
-                          type="text"
-                          value={item.delivery_address_complement || ''}
-                          onChange={(e) => updateItem(index, 'delivery_address_complement', e.target.value)}
-                          className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                          placeholder="Complemento"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Bairro
-                        </label>
-                        <input
-                          type="text"
-                          value={item.delivery_address_neighborhood || ''}
-                          onChange={(e) => updateItem(index, 'delivery_address_neighborhood', e.target.value)}
-                          className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                          placeholder="Bairro"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Cidade
-                        </label>
-                        <input
-                          type="text"
-                          value={item.delivery_address_city || ''}
-                          onChange={(e) => updateItem(index, 'delivery_address_city', e.target.value)}
-                          className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                          placeholder="Cidade"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Estado
-                        </label>
-                        <input
-                          type="text"
-                          value={item.delivery_address_state || ''}
-                          onChange={(e) => updateItem(index, 'delivery_address_state', e.target.value)}
-                          className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                          placeholder="Estado"
-                          maxLength={2}
-                        />
-                      </div>
-                      
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Observação
-                        </label>
-                        <textarea
-                          value={item.delivery_address_notes || ''}
-                          onChange={(e) => updateItem(index, 'delivery_address_notes', e.target.value)}
-                          className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                          placeholder="Observações sobre a entrega"
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             ))}
