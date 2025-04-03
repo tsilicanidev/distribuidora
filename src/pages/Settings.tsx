@@ -209,7 +209,7 @@ export default function Settings() {
       const { error: authError } = await supabase.auth.admin.deleteUser(id);
       if (authError) {
         // If auth deletion fails, show appropriate message
-        if (authError.message.includes('not_admin')) {
+        if (authError.code === 'P0001' || authError.message.toLowerCase().includes('only admins')) {
           throw new Error('Você não tem permissão para excluir usuários.');
         }
         throw authError;
