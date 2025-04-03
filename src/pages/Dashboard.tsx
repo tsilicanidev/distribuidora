@@ -15,6 +15,7 @@ import { SalesOrders } from './SalesOrders';
 import { DeliveryRoutes } from './DeliveryRoutes';
 import CustomerOrderLinks from './CustomerOrderLinks';
 import { Suppliers } from './Suppliers';
+import { Sellers } from './Sellers';
 
 function Dashboard() {
   return (
@@ -29,6 +30,7 @@ function Dashboard() {
               <Route path="/stock" element={<StockMovements />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/suppliers" element={<Suppliers />} />
+              <Route path="/sellers" element={<Sellers />} />
               <Route path="/drivers" element={<Drivers />} />
               <Route path="/routes" element={<DeliveryRoutes />} />
               <Route path="/invoice-entry" element={<InvoiceEntry />} />

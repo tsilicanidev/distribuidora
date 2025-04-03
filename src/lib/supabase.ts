@@ -3,6 +3,7 @@ import type { Database } from './database.types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
@@ -117,6 +118,18 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     }
   }
 });
+
+// Create a separate admin client with service role
+export const supabaseAdmin = createClient<Database>(
+  supabaseUrl,
+  supabaseServiceKey || '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 // Function to check if user is admin
 export const isAdminOrMaster = (email: string) => {

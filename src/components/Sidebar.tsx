@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   Link,
-  Building2
+  Building2,
+  DollarSign
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -163,6 +164,20 @@ export function Sidebar() {
                 <Building2 className="h-5 w-5 mr-3" />
                 <span className="font-medium">Fornecedores</span>
               </NavLink>
+
+              {(isAdmin || isManager) && (
+                <NavLink
+                  to="/sellers"
+                  className={({ isActive }) =>
+                    `flex items-center px-4 py-2 text-gray-600 hover:bg-[#FF8A00]/10 hover:text-[#FF8A00] rounded-lg transition-colors duration-200 ${
+                      isActive ? 'bg-[#FF8A00]/10 text-[#FF8A00]' : ''
+                    }`
+                  }
+                >
+                  <DollarSign className="h-5 w-5 mr-3" />
+                  <span className="font-medium">Vendedores</span>
+                </NavLink>
+              )}
 
               <NavLink
                 to="/drivers"

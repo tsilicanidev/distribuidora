@@ -148,11 +148,25 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Get seller's commission rate from their profile
+      const { data: sellerProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('commission_rate')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching seller profile:', profileError);
+      }
+
+      // Use seller's commission rate or default to 5%
+      const commissionRate = sellerProfile?.commission_rate ?? 5;
+
       // Calculate totals
       const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
       const discountAmount = subtotal * (formData.discount_percentage / 100);
       const totalAmount = subtotal - discountAmount;
-      const commissionAmount = totalAmount * 0.05; // 5% commission
+      const commissionAmount = totalAmount * (commissionRate / 100); // Use seller's commission rate
 
       // Create order with retry logic
       let orderCreated = false;

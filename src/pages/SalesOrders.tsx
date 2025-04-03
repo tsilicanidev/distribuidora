@@ -37,6 +37,7 @@ interface SalesOrder {
   };
   seller: {
     full_name: string | null;
+    commission_rate?: number | null;
   } | null;
   status: string;
   total_amount: number;
@@ -161,6 +162,12 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
                 <p className="text-sm font-medium text-gray-500">Vendedor</p>
                 <p className="text-base text-gray-900">{order.seller?.full_name || 'N/A'}</p>
               </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Comissão</p>
+                <p className="text-base text-gray-900">
+                  {order.commission_amount.toFixed(2)} ({order.seller?.commission_rate || 5}%)
+                </p>
+              </div>
             </div>
           </div>
 
@@ -284,7 +291,10 @@ function SalesOrders() {
             estado,
             cep
           ),
-          seller:profiles(full_name)
+          seller:profiles(
+            full_name,
+            commission_rate
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -627,6 +637,9 @@ function SalesOrders() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
                     {order.seller?.full_name || 'N/A'}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {order.seller?.commission_rate ? `${order.seller.commission_rate}%` : '5%'}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
