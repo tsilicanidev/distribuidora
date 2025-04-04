@@ -36,6 +36,17 @@ export default function Settings() {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Erro ao obter UID:", error.message);
+      } else {
+        console.log("🧠 UID do usuário logado:", data?.user?.id);
+      }
+    })();
+  }, []);
+
   async function fetchUsers() {
     try {
       const { data: profiles, error: profilesError } = await supabase
