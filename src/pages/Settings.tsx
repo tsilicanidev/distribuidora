@@ -31,13 +31,6 @@ export default function Settings() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      console.log("Auth UID:", data?.user?.id);
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error) {
         console.error("Erro ao obter UID:", error.message);
