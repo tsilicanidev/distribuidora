@@ -195,27 +195,31 @@ export default function Settings() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
-
+  
     try {
-      // Delete profile first
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
-
-      if (profileError) throw profileError;
-
-      // Then delete auth user
+      // Only allow admin and manager to delete users
+      if (!isAdmin && !isManager) {
+        throw new Error('Você não tem permissão para excluir usuários');
+      }
+  
+      // Deleta o profile via função RPC
+      const { error: rpcError } = await supabase.rpc('delete_user_by_admin', {
+        target_id: id,
+      });
+  
+      if (rpcError) throw rpcError;
+  
+      // Depois, deleta o usuário do auth
       const { error: authError } = await supabase.auth.admin.deleteUser(id);
+  
       if (authError) {
-        // If auth deletion fails, show appropriate message
-        if (authError.code === 'P0001' || authError.message.toLowerCase().includes('only admins')) {
+        if (authError.message.includes('not_admin')) {
           throw new Error('Você não tem permissão para excluir usuários.');
         }
         throw authError;
       }
-
-      // Update local state to remove the deleted user
+  
+      // Atualiza a lista local
       setUsers(users.filter(user => user.id !== id));
       setError(null);
     } catch (error) {
