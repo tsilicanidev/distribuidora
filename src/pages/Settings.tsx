@@ -30,10 +30,11 @@ export default function Settings() {
   const { isAdmin } = useAuth();
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-    }
-  }, [isAdmin]);
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      console.log("Auth UID:", data?.user?.id);
+    })();
+  }, []);
 
   async function fetchUsers() {
     try {
