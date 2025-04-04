@@ -30,15 +30,10 @@ export default function Settings() {
   const { isAdmin } = useAuth();
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Erro ao obter UID:", error.message);
-      } else {
-        console.log("🧠 UID do usuário logado:", data?.user?.id);
-      }
-    })();
-  }, []);
+    if (isAdmin) {
+      fetchUsers();
+    }
+  }, [isAdmin]);
 
   async function fetchUsers() {
     try {
