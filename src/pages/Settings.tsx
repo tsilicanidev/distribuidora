@@ -9,6 +9,7 @@ interface User {
   full_name: string;
   role: string;
   created_at: string;
+  commission_rate?: number;
 }
 
 export default function Settings() {
@@ -23,6 +24,7 @@ export default function Settings() {
     password: '',
     full_name: '',
     role: 'seller',
+    commission_rate: 5,
   });
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,39 @@ export default function Settings() {
 
       if (profilesError) throw profilesError;
 
-      setUsers(profiles || []);
+      // Get commission rates for sellers
+      const { data: commissionRates, error: ratesError } = await supabase
+        .from('commission_rates')
+        .select('*');
+
+      if (ratesError) {
+        console.error('Error fetching commission rates:', ratesError);
+      }
+
+      // Combine profiles with commission rates
+      const usersWithCommission = profiles?.map(profile => {
+        let commissionRate;
+        
+        // If this is a seller, try to find their commission rate
+        if (profile.role === 'seller') {
+          // First check for user-specific rate
+          const userRate = commissionRates?.find(rate => rate.user_id === profile.id);
+          if (userRate) {
+            commissionRate = userRate.rate;
+          } else {
+            // Fall back to default rate for the role
+            const defaultRate = commissionRates?.find(rate => rate.role === 'seller' && !rate.user_id);
+            commissionRate = defaultRate?.rate || 5; // Default to 5% if no rate found
+          }
+        }
+        
+        return {
+          ...profile,
+          commission_rate: commissionRate
+        };
+      });
+
+      setUsers(usersWithCommission || []);
       setError(null);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -60,55 +94,17 @@ export default function Settings() {
     setError(null);
 
     try {
-      // Create auth user first with retry logic
-      let authData;
-      let authError;
-      const maxRetries = 3;
-      let retryCount = 0;
-      let retryDelay = 1000; // Start with 1 second delay
-
-      while (retryCount < maxRetries) {
-        try {
-          const { data, error } = await supabase.auth.signUp({
-            email: formData.email,
-            password: formData.password,
-            options: {
-              data: {
-                full_name: formData.full_name,
-                role: formData.role
-              }
-            }
-          });
-
-          authData = data;
-          authError = error;
-          
-          // If there's no error or it's a "user already exists" error, break out of retry loop
-          if (!authError || (authError && authError.message.includes('already registered'))) {
-            break;
-          }
-          
-          // If we get here, it's a server error that might be temporary
-          console.log(`Retry attempt ${retryCount + 1} for user creation`);
-          retryCount++;
-          
-          // Wait before retry with exponential backoff
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          retryDelay *= 2; // Double the delay for next retry
-        } catch (error) {
-          console.error(`Retry attempt ${retryCount + 1} failed:`, error);
-          retryCount++;
-          
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          retryDelay *= 2; // Double the delay for next retry
-          
-          // If this is our last retry, capture the error
-          if (retryCount >= maxRetries) {
-            authError = error;
+      // Create auth user first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.full_name,
+            role: formData.role
           }
         }
-      }
+      });
 
       if (authError) {
         if (authError.message.includes('already registered')) {
@@ -118,50 +114,34 @@ export default function Settings() {
       }
 
       if (authData.user) {
-        // Create profile with retry logic
-        let profileCreated = false;
-        retryCount = 0;
-        retryDelay = 1000;
+        // Create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: authData.user.id,
+            email: formData.email,
+            full_name: formData.full_name,
+            role: formData.role,
+          }]);
 
-        while (!profileCreated && retryCount < maxRetries) {
-          try {
-            // Create profile
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .insert([{
-                id: authData.user.id,
-                email: formData.email,
-                full_name: formData.full_name,
-                role: formData.role,
-              }]);
+        if (profileError) {
+          // If profile creation fails, delete the auth user
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          throw profileError;
+        }
 
-            if (profileError) {
-              // If this is our last retry, delete the auth user and throw the error
-              if (retryCount >= maxRetries - 1) {
-                await supabase.auth.admin.deleteUser(authData.user.id);
-                throw profileError;
-              }
-              
-              // Otherwise, retry
-              retryCount++;
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-              retryDelay *= 2;
-              continue;
-            }
+        // If user is a seller, set commission rate
+        if (formData.role === 'seller') {
+          const { error: commissionError } = await supabase
+            .from('commission_rates')
+            .insert([{
+              user_id: authData.user.id,
+              role: 'seller',
+              rate: formData.commission_rate
+            }]);
 
-            // If we get here, profile creation was successful
-            profileCreated = true;
-          } catch (error) {
-            // If this is our last retry, delete the auth user and throw the error
-            if (retryCount >= maxRetries - 1) {
-              await supabase.auth.admin.deleteUser(authData.user.id);
-              throw error;
-            }
-            
-            // Otherwise, retry
-            retryCount++;
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            retryDelay *= 2;
+          if (commissionError) {
+            console.error('Error setting commission rate:', commissionError);
           }
         }
 
@@ -171,7 +151,8 @@ export default function Settings() {
           email: formData.email,
           full_name: formData.full_name,
           role: formData.role,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          commission_rate: formData.role === 'seller' ? formData.commission_rate : undefined
         };
         setUsers([newUser, ...users]);
 
@@ -181,6 +162,7 @@ export default function Settings() {
           password: '',
           full_name: '',
           role: 'seller',
+          commission_rate: 5,
         });
         setShowModal(false);
         setError(null);
@@ -195,31 +177,37 @@ export default function Settings() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
-  
+
     try {
-      // Only allow admin and manager to delete users
-      if (!isAdmin && !isManager) {
-        throw new Error('Você não tem permissão para excluir usuários');
+      // Delete profile first
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+
+      if (profileError) throw profileError;
+
+      // Delete commission rate if exists
+      const { error: commissionError } = await supabase
+        .from('commission_rates')
+        .delete()
+        .eq('user_id', id);
+
+      if (commissionError) {
+        console.error('Error deleting commission rate:', commissionError);
       }
-  
-      // Deleta o profile via função RPC
-      const { error: rpcError } = await supabase.rpc('delete_user_by_admin', {
-        target_id: id,
-      });
-  
-      if (rpcError) throw rpcError;
-  
-      // Depois, deleta o usuário do auth
+
+      // Then delete auth user
       const { error: authError } = await supabase.auth.admin.deleteUser(id);
-  
       if (authError) {
+        // If auth deletion fails, show appropriate message
         if (authError.message.includes('not_admin')) {
           throw new Error('Você não tem permissão para excluir usuários.');
         }
         throw authError;
       }
-  
-      // Atualiza a lista local
+
+      // Update local state to remove the deleted user
       setUsers(users.filter(user => user.id !== id));
       setError(null);
     } catch (error) {
@@ -253,6 +241,53 @@ export default function Settings() {
       setError(error instanceof Error ? error.message : 'Erro ao redefinir senha');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCommissionRateChange = async (userId: string, newRate: number) => {
+    try {
+      // Check if a commission rate already exists for this user
+      const { data: existingRates, error: checkError } = await supabase
+        .from('commission_rates')
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (checkError) throw checkError;
+      
+      let updateError;
+      
+      if (existingRates && existingRates.length > 0) {
+        // Update existing rate
+        const { error } = await supabase
+          .from('commission_rates')
+          .update({ rate: newRate })
+          .eq('user_id', userId);
+          
+        updateError = error;
+      } else {
+        // Insert new rate
+        const { error } = await supabase
+          .from('commission_rates')
+          .insert([{ 
+            user_id: userId,
+            role: 'seller',
+            rate: newRate 
+          }]);
+          
+        updateError = error;
+      }
+      
+      if (updateError) throw updateError;
+
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === userId 
+          ? { ...user, commission_rate: newRate }
+          : user
+      ));
+    } catch (error) {
+      console.error('Error updating commission rate:', error);
+      setError('Erro ao atualizar taxa de comissão');
     }
   };
 
@@ -335,6 +370,9 @@ export default function Settings() {
                 Função
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Comissão (%)
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Data de Cadastro
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -359,6 +397,19 @@ export default function Settings() {
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {user.role === 'seller' && (
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={user.commission_rate || 5}
+                      onChange={(e) => handleCommissionRateChange(user.id, parseFloat(e.target.value))}
+                      className="w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#FF8A00]"
+                    />
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(user.created_at).toLocaleDateString()}
@@ -470,6 +521,24 @@ export default function Settings() {
                   <option value="admin">Administrador</option>
                 </select>
               </div>
+
+              {formData.role === 'seller' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Taxa de Comissão (%)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={formData.commission_rate}
+                    onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) })}
+                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                  />
+                </div>
+              )}
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button
