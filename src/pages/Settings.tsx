@@ -23,7 +23,7 @@ export default function Settings() {
     email: '',
     password: '',
     full_name: '',
-    role: 'seller',
+    role: '',
     commission_rate: 5,
   });
   const [resetPassword, setResetPassword] = useState('');
@@ -198,15 +198,18 @@ export default function Settings() {
       }
 
       // Then delete auth user
-      const { error: authError } = await supabase.auth.admin.deleteUser(id);
-      if (authError) {
-        // If auth deletion fails, show appropriate message
-        if (authError.message.includes('not_admin')) {
-          throw new Error('Você não tem permissão para excluir usuários.');
-        }
-        throw authError;
+      const response = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao excluir usuário');
       }
-
+      
       // Update local state to remove the deleted user
       setUsers(users.filter(user => user.id !== id));
       setError(null);

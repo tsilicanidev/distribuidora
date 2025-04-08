@@ -21,7 +21,7 @@ BEGIN
   IF (TG_OP = 'DELETE' OR NEW.role != 'master') AND 
      NOT EXISTS (
        SELECT 1 FROM profiles 
-       WHERE role = 'master' 
+       WHERE role = 'admin' 
        AND id != COALESCE(OLD.id, NEW.id)
      ) THEN
     RAISE EXCEPTION 'Cannot remove last master user';
@@ -32,21 +32,21 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add trigger to protect master users
-DROP TRIGGER IF EXISTS ensure_master_profile_trigger ON profiles;
-CREATE TRIGGER ensure_master_profile_trigger
+DROP TRIGGER IF EXISTS ensure_admin_profile_trigger ON profiles;
+CREATE TRIGGER ensure_admin_profile_trigger
   BEFORE UPDATE OR DELETE ON profiles
   FOR EACH ROW
-  EXECUTE FUNCTION ensure_master_profile();
+  EXECUTE FUNCTION ensure_admin_profile();
 
 -- Create function to handle master user creation
-CREATE OR REPLACE FUNCTION handle_master_user()
+CREATE OR REPLACE FUNCTION handle_admin_user()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Only allow master role if no master exists
-  IF NEW.role = 'master' AND EXISTS (
-    SELECT 1 FROM profiles WHERE role = 'master'
+  IF NEW.role = 'admin' AND EXISTS (
+    SELECT 1 FROM profiles WHERE role = 'admin'
   ) THEN
-    RAISE EXCEPTION 'Master user already exists';
+    RAISE EXCEPTION 'Admin user already exists';
   END IF;
   
   RETURN NEW;
@@ -54,11 +54,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add trigger for master user creation
-DROP TRIGGER IF EXISTS handle_master_user_trigger ON profiles;
-CREATE TRIGGER handle_master_user_trigger
+DROP TRIGGER IF EXISTS handle_admin_user_trigger ON profiles;
+CREATE TRIGGER handle_admin_user_trigger
   BEFORE INSERT ON profiles
   FOR EACH ROW
-  EXECUTE FUNCTION handle_master_user();
+  EXECUTE FUNCTION handle_admin_user();
 
 -- Remove admin@admin.com user safely
 DO $$ 
@@ -67,12 +67,12 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM profiles 
     WHERE role IN ('master', 'admin') 
-    AND email != 'admin@admin.com'
+    AND email != 'admin1@admin.com'
   ) THEN
     -- Delete profile first
-    DELETE FROM profiles WHERE email = 'admin@admin.com';
+    DELETE FROM profiles WHERE email = 'admin1@admin.com';
     
     -- Delete from auth.users
-    DELETE FROM auth.users WHERE email = 'admin@admin.com';
+    DELETE FROM auth.users WHERE email = 'admin1@admin.com';
   END IF;
 END $$;
