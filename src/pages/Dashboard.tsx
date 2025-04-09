@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Products } from './Products';
 import { StockMovements } from './StockMovements';
@@ -16,8 +16,11 @@ import { DeliveryRoutes } from './DeliveryRoutes';
 import CustomerOrderLinks from './CustomerOrderLinks';
 import { Suppliers } from './Suppliers';
 import { Sellers } from './Sellers';
+import { useAuth } from '../hooks/useAuth';
 
 function Dashboard() {
+  const { isAdmin, isManager } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
@@ -37,7 +40,12 @@ function Dashboard() {
               <Route path="/delivery-notes" element={<DeliveryNotes />} />
               <Route path="/fiscal-invoices" element={<FiscalInvoices />} />
               <Route path="/reports" element={<Reports />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route 
+                path="/settings" 
+                element={
+                  isAdmin || isManager ? <Settings /> : <Navigate to="/" replace />
+                } 
+              />
               <Route path="/sales" element={<SalesOrders />} />
               <Route path="/customer-orders" element={<CustomerOrderLinks />} />
             </Routes>

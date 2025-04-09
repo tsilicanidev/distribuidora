@@ -239,7 +239,7 @@ export function Sidebar() {
                 <span className="font-medium">Relatórios</span>
               </NavLink>
 
-              {isAdmin && (
+              {(isAdmin || isManager) && (
                 <NavLink
                   to="/settings"
                   className={({ isActive }) =>

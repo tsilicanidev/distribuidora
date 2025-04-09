@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Copy, CheckCircle2, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { createOrderLink } from '../utils/token';
+import { useAuth } from '../hooks/useAuth';
 
 interface Customer {
   id: string;
@@ -20,6 +21,7 @@ interface OrderLink {
 }
 
 export default function CustomerOrderLinks() {
+  const { user, loading: authLoading } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orderLinks, setOrderLinks] = useState<OrderLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,13 +38,13 @@ export default function CustomerOrderLinks() {
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!authLoading && user) {
+      fetchData();
+    }
+  }, [authLoading, user]);
 
   async function fetchData() {
     try {
-      // First check if user has permission
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
       const { data: profile } = await supabase
@@ -145,10 +147,20 @@ export default function CustomerOrderLinks() {
     link.customer.cpf_cnpj.includes(searchTerm)
   );
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8A00]"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+          Você precisa estar autenticado para acessar esta página.
+        </div>
       </div>
     );
   }

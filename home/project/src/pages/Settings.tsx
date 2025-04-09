@@ -8,7 +8,6 @@ interface User {
   email: string;
   full_name: string;
   role: string;
-  commission_rate?: number;
   created_at: string;
 }
 
@@ -24,7 +23,6 @@ export default function Settings() {
     password: '',
     full_name: '',
     role: 'seller',
-    commission_rate: 5,
   });
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -82,67 +80,20 @@ export default function Settings() {
       }
 
       if (authData.user) {
-        // Create profile with retry logic
-        let profileCreated = false;
-        let retryCount = 0;
-        const maxRetries = 3;
-        let lastError;
+        // Create profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: authData.user.id,
+            email: formData.email,
+            full_name: formData.full_name,
+            role: formData.role,
+          }]);
 
-        while (!profileCreated && retryCount < maxRetries) {
-          try {
-            // Create profile
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .insert([{
-                id: authData.user.id,
-                email: formData.email,
-                full_name: formData.full_name,
-                role: formData.role,
-                commission_rate: formData.role === 'seller' ? formData.commission_rate : null
-              }]);
-
-            if (profileError) {
-              // Check if profile already exists
-              const { data: existingProfile } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', authData.user.id)
-                .single();
-
-              if (existingProfile) {
-                // Profile already exists, update it instead
-                const { error: updateError } = await supabase
-                  .from('profiles')
-                  .update({
-                    email: formData.email,
-                    full_name: formData.full_name,
-                    role: formData.role,
-                    commission_rate: formData.role === 'seller' ? formData.commission_rate : null
-                  })
-                  .eq('id', authData.user.id);
-
-                if (updateError) {
-                  throw updateError;
-                }
-              } else {
-                throw profileError;
-              }
-            }
-
-            // If we get here, profile creation was successful
-            profileCreated = true;
-          } catch (error) {
-            lastError = error;
-            retryCount++;
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-          }
-        }
-
-        if (!profileCreated) {
-          // If all retries failed, delete the auth user and throw the error
+        if (profileError) {
+          // If profile creation fails, delete the auth user
           await supabase.auth.admin.deleteUser(authData.user.id);
-          throw lastError || new Error('Falha ao criar perfil após várias tentativas');
+          throw profileError;
         }
 
         // Add new user to local state
@@ -151,7 +102,6 @@ export default function Settings() {
           email: formData.email,
           full_name: formData.full_name,
           role: formData.role,
-          commission_rate: formData.role === 'seller' ? formData.commission_rate : undefined,
           created_at: new Date().toISOString()
         };
         setUsers([newUser, ...users]);
@@ -162,7 +112,6 @@ export default function Settings() {
           password: '',
           full_name: '',
           role: 'seller',
-          commission_rate: 5,
         });
         setShowModal(false);
         setError(null);
@@ -237,7 +186,10 @@ export default function Settings() {
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {
       admin: 'Administrador',
-      seller: 'Vendedor'
+      manager: 'Gerente',
+      seller: 'Vendedor',
+      driver: 'Motorista',
+      warehouse: 'Estoque'
     };
     return labels[role] || role;
   };
@@ -245,7 +197,10 @@ export default function Settings() {
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
       admin: 'bg-red-100 text-red-800',
-      seller: 'bg-green-100 text-green-800'
+      manager: 'bg-blue-100 text-blue-800',
+      seller: 'bg-green-100 text-green-800',
+      driver: 'bg-yellow-100 text-yellow-800',
+      warehouse: 'bg-orange-100 text-orange-800'
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
@@ -306,10 +261,6 @@ export default function Settings() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Função
               </th>
-              {/* Add commission rate column */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Comissão (%)
-              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Data de Cadastro
               </th>
@@ -335,12 +286,6 @@ export default function Settings() {
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
-                </td>
-                {/* Display commission rate */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-500">
-                    {user.role === 'seller' ? (user.commission_rate || 5).toFixed(1) + '%' : '-'}
-                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(user.created_at).toLocaleDateString()}
@@ -446,28 +391,12 @@ export default function Settings() {
                   className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
                 >
                   <option value="seller">Vendedor</option>
+                  <option value="driver">Motorista</option>
+                  <option value="warehouse">Estoque</option>
+                  <option value="manager">Gerente</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
-
-              {/* Show commission rate field only for sellers */}
-              {formData.role === 'seller' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Taxa de Comissão (%)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={formData.commission_rate}
-                    onChange={(e) => setFormData({ ...formData, commission_rate: parseFloat(e.target.value) || 0 })}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                  />
-                </div>
-              )}
 
               <div className="flex justify-end space-x-3 mt-6">
                 <button

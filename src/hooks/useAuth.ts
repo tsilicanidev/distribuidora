@@ -60,7 +60,7 @@ export function useAuth() {
     metadata,
     loading,
     isMaster: isUserAdminOrMaster,
-    isAdmin: hasPermissions,
+    isAdmin: isAdminRole || hasPermissions,
     isManager: metadata?.role === 'manager',
     isSeller: metadata?.role === 'seller',
     isWarehouse: metadata?.role === 'warehouse'
