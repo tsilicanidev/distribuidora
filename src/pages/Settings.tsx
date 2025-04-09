@@ -62,111 +62,50 @@ export default function Settings() {
     setError(null);
 
     try {
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
+      // Get the current user's token for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autorizado');
+
+      // Call the edge function to create a user
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-management`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'create',
+          userData: {
+            email: formData.email,
+            password: formData.password,
             full_name: formData.full_name,
-            role: formData.role
+            role: formData.role,
+            commission_rate: formData.role === 'seller' ? formData.commission_rate : null
           }
-        }
+        })
       });
 
-      if (authError) {
-        if (authError.message.includes('already registered')) {
-          throw new Error('Um usuário com este email já existe');
-        }
-        throw authError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar usuário');
       }
 
-      if (authData.user) {
-        // Create profile with retry logic
-        let profileCreated = false;
-        let retryCount = 0;
-        const maxRetries = 3;
-        let lastError;
-
-        while (!profileCreated && retryCount < maxRetries) {
-          try {
-            // Create profile
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .insert([{
-                id: authData.user.id,
-                email: formData.email,
-                full_name: formData.full_name,
-                role: formData.role,
-                commission_rate: formData.role === 'seller' ? formData.commission_rate : null
-              }]);
-
-            if (profileError) {
-              // Check if profile already exists
-              const { data: existingProfile } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', authData.user.id)
-                .single();
-
-              if (existingProfile) {
-                // Profile already exists, update it instead
-                const { error: updateError } = await supabase
-                  .from('profiles')
-                  .update({
-                    email: formData.email,
-                    full_name: formData.full_name,
-                    role: formData.role,
-                    commission_rate: formData.role === 'seller' ? formData.commission_rate : null
-                  })
-                  .eq('id', authData.user.id);
-
-                if (updateError) {
-                  throw updateError;
-                }
-              } else {
-                throw profileError;
-              }
-            }
-
-            // If we get here, profile creation was successful
-            profileCreated = true;
-          } catch (error) {
-            lastError = error;
-            retryCount++;
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-          }
-        }
-
-        if (!profileCreated) {
-          // If all retries failed, delete the auth user and throw the error
-          await supabase.auth.admin.deleteUser(authData.user.id);
-          throw lastError || new Error('Falha ao criar perfil após várias tentativas');
-        }
-
-        // Add new user to local state
-        const newUser = {
-          id: authData.user.id,
-          email: formData.email,
-          full_name: formData.full_name,
-          role: formData.role,
-          commission_rate: formData.role === 'seller' ? formData.commission_rate : undefined,
-          created_at: new Date().toISOString()
-        };
-        setUsers([newUser, ...users]);
-
-        // Reset form and close modal
-        setFormData({
-          email: '',
-          password: '',
-          full_name: '',
-          role: 'seller',
-          commission_rate: 5,
-        });
-        setShowModal(false);
-        setError(null);
+      // Add new user to local state
+      if (result.success && result.user) {
+        setUsers([result.user, ...users]);
       }
+
+      // Reset form and close modal
+      setFormData({
+        email: '',
+        password: '',
+        full_name: '',
+        role: 'seller',
+        commission_rate: 5,
+      });
+      setShowModal(false);
+      setError(null);
     } catch (err) {
       console.error('Error creating user:', err);
       setError(err instanceof Error ? err.message : 'Erro ao criar usuário');
@@ -179,22 +118,27 @@ export default function Settings() {
     if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
 
     try {
-      // Delete profile first
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
+      // Get the current user's token for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autorizado');
 
-      if (profileError) throw profileError;
+      // Call the edge function to delete a user
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-management`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          userId: id
+        })
+      });
 
-      // Then delete auth user
-      const { error: authError } = await supabase.auth.admin.deleteUser(id);
-      if (authError) {
-        // If auth deletion fails, show appropriate message
-        if (authError.message.includes('not_admin')) {
-          throw new Error('Você não tem permissão para excluir usuários.');
-        }
-        throw authError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao excluir usuário');
       }
 
       // Update local state to remove the deleted user
@@ -214,13 +158,31 @@ export default function Settings() {
       setSaving(true);
       setError(null);
 
-      // Update user's password
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        selectedUserId,
-        { password: resetPassword }
-      );
+      // Get the current user's token for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autorizado');
 
-      if (updateError) throw updateError;
+      // Call the edge function to reset password
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-management`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'resetPassword',
+          userId: selectedUserId,
+          userData: {
+            password: resetPassword
+          }
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao redefinir senha');
+      }
 
       setShowResetModal(false);
       setSelectedUserId(null);

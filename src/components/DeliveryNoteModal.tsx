@@ -8,11 +8,6 @@ interface Vehicle {
   model: string;
 }
 
-interface Route {
-  id: string;
-  name: string;
-}
-
 interface Order {
   id: string;
   number: string;
@@ -30,6 +25,14 @@ interface DeliveryNoteItem {
   delivery_sequence: number;
   payment_method?: string;
   due_date?: string;
+  delivery_address?: string;
+  delivery_address_street?: string;
+  delivery_address_number?: string;
+  delivery_address_complement?: string;
+  delivery_address_neighborhood?: string;
+  delivery_address_city?: string;
+  delivery_address_state?: string;
+  delivery_address_notes?: string;
 }
 
 interface DeliveryNoteModalProps {
@@ -41,7 +44,6 @@ interface DeliveryNoteModalProps {
 
 export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: DeliveryNoteModalProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,7 +53,6 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
     number: '',
     date: new Date().toISOString().split('T')[0],
     vehicle_id: '',
-    route_id: '',
     helper_name: '',
     notes: '',
   });
@@ -71,7 +72,6 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           number: deliveryNote.number,
           date: deliveryNote.date,
           vehicle_id: deliveryNote.vehicle_id,
-          route_id: deliveryNote.route_id || '',
           helper_name: deliveryNote.helper_name || '',
           notes: deliveryNote.notes || '',
         });
@@ -82,6 +82,14 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
             delivery_sequence: item.delivery_sequence,
             payment_method: item.payment_method || '',
             due_date: item.due_date || '',
+            delivery_address: item.delivery_address || '',
+            delivery_address_street: item.delivery_address_street || '',
+            delivery_address_number: item.delivery_address_number || '',
+            delivery_address_complement: item.delivery_address_complement || '',
+            delivery_address_neighborhood: item.delivery_address_neighborhood || '',
+            delivery_address_city: item.delivery_address_city || '',
+            delivery_address_state: item.delivery_address_state || '',
+            delivery_address_notes: item.delivery_address_notes || '',
           })));
         } else {
           fetchDeliveryNoteItems(deliveryNote.id);
@@ -92,7 +100,6 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           number: '',
           date: new Date().toISOString().split('T')[0],
           vehicle_id: '',
-          route_id: '',
           helper_name: '',
           notes: '',
         });
@@ -110,7 +117,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
     try {
       const { data: itemsData, error: itemsError } = await supabase
         .from('delivery_note_items')
-        .select('order_id, delivery_sequence')
+        .select('order_id, delivery_sequence, delivery_address, delivery_address_street, delivery_address_number, delivery_address_complement, delivery_address_neighborhood, delivery_address_city, delivery_address_state, delivery_address_notes')
         .eq('delivery_note_id', deliveryNoteId);
 
       if (itemsError) throw itemsError;
@@ -153,17 +160,13 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       // Get vehicles and routes first
       const [
         { data: vehiclesData, error: vehiclesError },
-        { data: routesData, error: routesError }
       ] = await Promise.all([
         supabase.from('vehicles').select('*').eq('status', 'available'),
-        supabase.from('delivery_routes').select('*')
       ]);
 
       if (vehiclesError) throw vehiclesError;
-      if (routesError) throw routesError;
 
       setVehicles(vehiclesData || []);
-      setRoutes(routesData || []);
 
       // Get orders that are approved and not in any delivery note or are in the current delivery note
       let query = supabase
@@ -260,6 +263,14 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           ...newItems[index],
           payment_method: selectedOrder.payment_method || '',
           due_date: selectedOrder.due_date || '',
+          // Pre-fill address from customer
+          delivery_address: selectedOrder.customer.endereco || '',
+          delivery_address_street: '',
+          delivery_address_number: '',
+          delivery_address_complement: '',
+          delivery_address_neighborhood: '',
+          delivery_address_city: '',
+          delivery_address_state: '',
         };
       }
     }
@@ -326,7 +337,15 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
           items.map(item => ({
             delivery_note_id: deliveryNoteId,
             order_id: item.order_id,
-            delivery_sequence: item.delivery_sequence
+            delivery_sequence: item.delivery_sequence,
+            delivery_address: item.delivery_address,
+            delivery_address_street: item.delivery_address_street,
+            delivery_address_number: item.delivery_address_number,
+            delivery_address_complement: item.delivery_address_complement,
+            delivery_address_neighborhood: item.delivery_address_neighborhood,
+            delivery_address_city: item.delivery_address_city,
+            delivery_address_state: item.delivery_address_state,
+            delivery_address_notes: item.delivery_address_notes
           }))
         );
 
@@ -445,24 +464,6 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Rota
-              </label>
-              <select
-                value={formData.route_id}
-                onChange={(e) => setFormData({ ...formData, route_id: e.target.value })}
-                className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-              >
-                <option value="">Selecione uma rota (opcional)</option>
-                {routes.map((route) => (
-                  <option key={route.id} value={route.id}>
-                    {route.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
                 Ajudante
               </label>
               <input
@@ -501,64 +502,158 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
             </div>
 
             {items.map((item, index) => (
-              <div key={index} className="grid grid-cols-12 gap-4 items-end border-b border-gray-200 pb-4">
-                <div className="col-span-5">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pedido *
-                  </label>
-                  <select
-                    required
-                    value={item.order_id}
-                    onChange={(e) => updateItem(index, 'order_id', e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                  >
-                    <option value="">Selecione um pedido</option>
-                    {orders.map((order) => (
-                      <option key={order.id} value={order.id}>
-                        {order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
-                      </option>
-                    ))}
-                  </select>
+              <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                <div className="grid grid-cols-12 gap-4 items-end">
+                  <div className="col-span-5">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Pedido *
+                    </label>
+                    <select
+                      required
+                      value={item.order_id}
+                      onChange={(e) => updateItem(index, 'order_id', e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                    >
+                      <option value="">Selecione um pedido</option>
+                      {orders.map((order) => (
+                        <option key={order.id} value={order.id}>
+                          {order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="col-span-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Forma de Pagamento
+                    </label>
+                    <select
+                      value={item.payment_method || ''}
+                      onChange={(e) => updateItem(index, 'payment_method', e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                    >
+                      {paymentMethods.map((method) => (
+                        <option key={method.value} value={method.value}>
+                          {method.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="col-span-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Data de Vencimento
+                    </label>
+                    <input
+                      type="date"
+                      value={item.due_date || ''}
+                      onChange={(e) => updateItem(index, 'due_date', e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                    />
+                  </div>
+
+                  <div className="col-span-1">
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      className="w-full px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                      disabled={items.length === 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="col-span-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Forma de Pagamento
-                  </label>
-                  <select
-                    value={item.payment_method || ''}
-                    onChange={(e) => updateItem(index, 'payment_method', e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                  >
-                    {paymentMethods.map((method) => (
-                      <option key={method.value} value={method.value}>
-                        {method.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-span-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Data de Vencimento
-                  </label>
-                  <input
-                    type="date"
-                    value={item.due_date || ''}
-                    onChange={(e) => updateItem(index, 'due_date', e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
-                  />
-                </div>
-
-                <div className="col-span-1">
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="w-full px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                    disabled={items.length === 1}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
+                {/* Address fields */}
+                <div className="mt-4 border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Endereço de Entrega</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Rua
+                      </label>
+                      <input
+                        type="text"
+                        value={item.delivery_address_street || ''}
+                        onChange={(e) => updateItem(index, 'delivery_address_street', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                        placeholder="Rua"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Número
+                      </label>
+                      <input
+                        type="text"
+                        value={item.delivery_address_number || ''}
+                        onChange={(e) => updateItem(index, 'delivery_address_number', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                        placeholder="Número"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Complemento
+                      </label>
+                      <input
+                        type="text"
+                        value={item.delivery_address_complement || ''}
+                        onChange={(e) => updateItem(index, 'delivery_address_complement', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                        placeholder="Complemento"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Bairro
+                      </label>
+                      <input
+                        type="text"
+                        value={item.delivery_address_neighborhood || ''}
+                        onChange={(e) => updateItem(index, 'delivery_address_neighborhood', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                        placeholder="Bairro"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Cidade
+                      </label>
+                      <input
+                        type="text"
+                        value={item.delivery_address_city || ''}
+                        onChange={(e) => updateItem(index, 'delivery_address_city', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                        placeholder="Cidade"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Estado
+                      </label>
+                      <input
+                        type="text"
+                        value={item.delivery_address_state || ''}
+                        onChange={(e) => updateItem(index, 'delivery_address_state', e.target.value)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                        placeholder="Estado"
+                        maxLength={2}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Observações de Entrega
+                    </label>
+                    <textarea
+                      value={item.delivery_address_notes || ''}
+                      onChange={(e) => updateItem(index, 'delivery_address_notes', e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+                      rows={2}
+                      placeholder="Instruções para entrega, pontos de referência, etc."
+                    />
+                  </div>
                 </div>
               </div>
             ))}
