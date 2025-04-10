@@ -212,11 +212,14 @@ export default function Settings() {
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
 
-  const filteredUsers = users.filter(user => 
-    user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getRoleLabel(user.role).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const searchTermLower = searchTerm.toLowerCase();
+    return (
+      (user.full_name?.toLowerCase() || '').includes(searchTermLower) ||
+      (user.email?.toLowerCase() || '').includes(searchTermLower) ||
+      (getRoleLabel(user.role)?.toLowerCase() || '').includes(searchTermLower)
+    );
+  });
 
   if (!isAdmin) {
     return (

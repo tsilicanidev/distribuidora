@@ -104,8 +104,8 @@ export function Sellers() {
   };
 
   const filteredSellers = sellers.filter(seller => 
-    seller.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    seller.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (seller.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (seller.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   if (!isAdmin && !isManager) {

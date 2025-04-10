@@ -92,7 +92,20 @@ serve(async (req) => {
 
     // Perform the requested action
     if (action === "delete") {
-      // First delete the profile
+      // First check if the user exists
+      const { data: userToDelete, error: getUserError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (getUserError || !userToDelete) {
+        return new Response(
+          JSON.stringify({ error: "User not found" }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Delete the profile first
       const { error: deleteProfileError } = await supabase
         .from("profiles")
         .delete()
@@ -139,86 +152,83 @@ serve(async (req) => {
         );
       }
 
-      // Create auth user
-      const { data: authData, error: createUserError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: userData.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: userData.full_name,
-          role: userData.role
-        }
-      });
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', userData.email)
+        .single();
 
-      if (createUserError) {
+      if (existingUser) {
         return new Response(
-          JSON.stringify({ error: `Error creating user: ${createUserError.message}` }),
+          JSON.stringify({ error: "User with this email already exists" }),
           {
-            status: 500,
+            status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
       }
 
-      if (!authData.user) {
-        return new Response(
-          JSON.stringify({ error: "Failed to create user" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      // Create profile
-      const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", authData.user.id)
-      .maybeSingle();
-    
-    if (!existingProfile) {
-      const { error: createProfileError } = await supabase.from("profiles").insert([
-        {
-          id: authData.user.id,
+      try {
+        // Create auth user
+        const { data: authData, error: createUserError } = await supabase.auth.admin.createUser({
           email: userData.email,
-          full_name: userData.full_name,
-          role: userData.role,
-          commission_rate: userData.role === 'seller' ? userData.commission_rate || 5 : null
-        }
-      ]);
-      if (createProfileError) {
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        return new Response(JSON.stringify({
-          error: `Error creating profile: ${createProfileError.message}`
-        }), {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json"
+          password: userData.password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: userData.full_name,
+            role: userData.role
           }
         });
-      }
-    }
 
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "User created successfully",
-          user: {
+        if (createUserError || !authData.user) {
+          throw new Error(createUserError?.message || "Failed to create user");
+        }
+
+        // Create profile
+        const { error: createProfileError } = await supabase
+          .from("profiles")
+          .insert([{
             id: authData.user.id,
-            email: authData.user.email,
+            email: userData.email,
             full_name: userData.full_name,
             role: userData.role,
-            commission_rate: userData.role === 'seller' ? (userData.commission_rate || 5) : null,
-            created_at: authData.user.created_at
-          }
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+            commission_rate: userData.role === 'seller' ? (userData.commission_rate || 5) : null
+          }]);
+
+        if (createProfileError) {
+          // If profile creation fails, delete the auth user
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          throw new Error(`Error creating profile: ${createProfileError.message}`);
         }
-      );
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: "User created successfully",
+            user: {
+              id: authData.user.id,
+              email: authData.user.email,
+              full_name: userData.full_name,
+              role: userData.role,
+              commission_rate: userData.role === 'seller' ? (userData.commission_rate || 5) : null,
+              created_at: authData.user.created_at
+            }
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
     } else if (action === "resetPassword") {
       if (!userId || !userData || !userData.password) {
         return new Response(
