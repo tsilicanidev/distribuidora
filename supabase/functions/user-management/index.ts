@@ -171,28 +171,35 @@ serve(async (req) => {
       }
 
       // Create profile
-      const { error: createProfileError } = await supabase
-        .from("profiles")
-        .insert([{
+      const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+    
+    if (!existingProfile) {
+      const { error: createProfileError } = await supabase.from("profiles").insert([
+        {
           id: authData.user.id,
           email: userData.email,
           full_name: userData.full_name,
           role: userData.role,
-          commission_rate: userData.role === 'seller' ? (userData.commission_rate || 5) : null
-        }]);
-
+          commission_rate: userData.role === 'seller' ? userData.commission_rate || 5 : null
+        }
+      ]);
       if (createProfileError) {
-        // If profile creation fails, delete the auth user
         await supabase.auth.admin.deleteUser(authData.user.id);
-        
-        return new Response(
-          JSON.stringify({ error: `Error creating profile: ${createProfileError.message}` }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({
+          error: `Error creating profile: ${createProfileError.message}`
+        }), {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json"
           }
-        );
+        });
       }
+    }
 
       return new Response(
         JSON.stringify({ 
