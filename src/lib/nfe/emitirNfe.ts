@@ -3,12 +3,12 @@ import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import { salvarXmlAutorizado } from '@/lib/nfe/salvarXml';
 
-export async function emitirNFe(xmlAssinado: string): Promise<{
+export const emitirNFe = async (xmlAssinado: string): Promise<{
   sucesso: boolean;
   chave?: string;
   resposta?: string;
   motivo?: string;
-}> {
+}> => {
   const endpoint = process.env.VITE_SEFAZ_API_URL!;
   const envelope = `
   <soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"
