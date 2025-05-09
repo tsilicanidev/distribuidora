@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { gerarXmlNF, assinarXml } from '@/services/gerarXmlAssinar';
-import { emitirNFe } from '@/services/emitirNfe';
+import { emitirNFe } from '@/lib/nfe/emitirNfe';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
