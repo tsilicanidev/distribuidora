@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
 import { emitirNfe } from '@/lib/nfe/emitirNfe';
+import { NFe } from '@/services/nfe';
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
