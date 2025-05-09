@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
 import { emitirNFe } from '../lib/nfe/emitirNfe';
+import { NFe } from '../services/nfe';
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -264,6 +265,8 @@ function SalesOrders() {
   const { isManager, isAdmin } = useRole();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const nfeService = new NFe();
 
   useEffect(() => {
     fetchOrders();
