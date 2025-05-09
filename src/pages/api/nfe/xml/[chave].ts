@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
-import 'dotenv/config';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL!,
