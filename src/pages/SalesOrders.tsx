@@ -408,18 +408,11 @@ function SalesOrders() {
       setError(null);
       fetchOrders();
 
-      // Open NFe documents in new tabs - but only one at a time to prevent duplicate windows
+      // Open DANFE in a new window
       if (nfeResult.chave) {
-        // Open PDF in a new tab
-        const pdfWindow = window.open(`/api/nfe/danfe/${nfeResult.chave}`, '_blank');
-        
-        // Only open XML if PDF was successfully opened
-        if (pdfWindow) {
-          // Wait a moment before opening the second window to prevent popup blockers
-          setTimeout(() => {
-            window.open(`/api/nfe/xml/${nfeResult.chave}`, '_blank');
-          }, 500);
-        }
+        // Create a new window for the DANFE
+        const danfeUrl = `${window.location.origin}/api/nfe/danfe/${nfeResult.chave}`;
+        window.open(danfeUrl, '_blank');
       }
     } catch (error) {
       console.error('Erro ao aprovar pedido:', error);
