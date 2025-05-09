@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Minus, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { emitirNFe } from '@/lib/nfe/emitirNfe';
+import { emitirNFe } from '../lib/nfe/emitirNfe';
+import { NFe } from '../services/nfe';
 
 interface Supplier {
   id: string;
