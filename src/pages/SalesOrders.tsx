@@ -3,8 +3,7 @@ import { Plus, Search, FileText, AlertTriangle, CheckCircle, XCircle, Ban, Edit 
 import { supabase } from '../lib/supabase';
 import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
-import { emitirNFe } from '../lib/nfe/emitirNfe';
-import { NFe } from '../services/nfe';
+
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
