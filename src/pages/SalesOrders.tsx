@@ -48,7 +48,6 @@ interface SalesOrder {
   notes?: string;
 }
 
-// Helper functions for status colors and text
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'draft':
@@ -322,7 +321,6 @@ function SalesOrders() {
     setError(null);
 
     try {
-      // Get order items
       const { data: items, error: itemsError } = await supabase
         .from('sales_order_items')
         .select(`
@@ -334,9 +332,7 @@ function SalesOrders() {
       if (itemsError) throw itemsError;
       if (!items || items.length === 0) throw new Error('Pedido sem itens');
 
-      // Update stock quantities
       for (const item of items) {
-        // Get current stock quantity
         const { data: product, error: productError } = await supabase
           .from('products')
           .select('stock_quantity')
@@ -346,10 +342,8 @@ function SalesOrders() {
         if (productError) throw productError;
         if (!product) throw new Error('Produto não encontrado');
 
-        // Calculate new stock quantity
         const newQuantity = product.stock_quantity - item.quantity;
 
-        // Update stock
         const { error: stockError } = await supabase
           .from('products')
           .update({ stock_quantity: newQuantity })
@@ -357,7 +351,6 @@ function SalesOrders() {
 
         if (stockError) throw stockError;
 
-        // Create stock movement record
         const { error: movementError } = await supabase
           .from('stock_movements')
           .insert([{
@@ -371,7 +364,6 @@ function SalesOrders() {
         if (movementError) throw movementError;
       }
 
-      // Prepare NFe data
       const nfeData = {
         numero: order.number,
         serie: '1',
@@ -442,13 +434,11 @@ function SalesOrders() {
         informacoes_complementares: order.notes || ''
       };
 
-      // Emit NFe
-      const nfeResult = await emitirNFe(xmlAssinado);
+      const nfeResult = await emitirNfe(nfeData);
       if (!nfeResult.success) {
         throw new Error(nfeResult.message || 'Erro ao emitir NFe');
       }
 
-      // Create fiscal invoice record
       const { error: invoiceError } = await supabase
         .from('fiscal_invoices')
         .insert([{
@@ -465,7 +455,6 @@ function SalesOrders() {
 
       if (invoiceError) throw invoiceError;
 
-      // Update order status
       const { error: updateError } = await supabase
         .from('sales_orders')
         .update({ status: 'approved' })
@@ -476,14 +465,10 @@ function SalesOrders() {
       setError(null);
       fetchOrders();
 
-      // Open NFe documents in new tabs - but only one at a time to prevent duplicate windows
       if (nfeResult.pdf_url) {
-        // Open PDF in a new tab
         const pdfWindow = window.open(nfeResult.pdf_url, '_blank');
         
-        // Only open XML if PDF was successfully opened
         if (pdfWindow && nfeResult.xml_url) {
-          // Wait a moment before opening the second window to prevent popup blockers
           setTimeout(() => {
             window.open(nfeResult.xml_url, '_blank');
           }, 500);
@@ -676,7 +661,6 @@ function SalesOrders() {
                 </td>
                 <td className="px-3 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-2">
-                    {/* View button - always visible */}
                     <button
                       onClick={() => handleViewOrder(order)}
                       className="text-blue-600 hover:text-blue-900"
@@ -685,7 +669,6 @@ function SalesOrders() {
                       <FileText className="h-5 w-5" />
                     </button>
 
-                    {/* Edit button - only for pending orders */}
                     {order.status === 'pending' && (
                       <button
                         onClick={() => handleEditOrder(order)}
@@ -696,7 +679,6 @@ function SalesOrders() {
                       </button>
                     )}
 
-                    {/* Approve button - only for pending orders and admin/manager */}
                     {(isManager || isAdmin) && order.status === 'pending' && (
                       <button
                         onClick={() => handleApproveOrder(order)}
@@ -708,7 +690,6 @@ function SalesOrders() {
                       </button>
                     )}
 
-                    {/* Reject button - only for pending orders and admin/manager */}
                     {(isManager || isAdmin) && order.status === 'pending' && (
                       <button
                         onClick={() => handleRejectOrder(order)}
@@ -720,7 +701,6 @@ function SalesOrders() {
                       </button>
                     )}
 
-                    {/* Cancel button - only for pending orders and admin/manager */}
                     {(isManager || isAdmin) && order.status === 'pending' && (
                       <button
                         onClick={() => handleCancelOrder(order)}
