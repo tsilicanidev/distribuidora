@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { XMLParser } from 'fast-xml-parser';
 
 interface NFeItem {
   produto: {
@@ -121,7 +122,7 @@ export class NFe {
         pdf_url: pdfUrl,
         xml_url: xmlUrl
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao emitir NF-e:', error);
       return {
         success: false,
@@ -142,7 +143,7 @@ export class NFe {
         success: true,
         message: 'NF-e cancelada com sucesso'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao cancelar NF-e:', error);
       return {
         success: false,
@@ -168,7 +169,7 @@ export class NFe {
         success: true,
         message: 'Numeração inutilizada com sucesso'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao inutilizar numeração:', error);
       return {
         success: false,
@@ -191,7 +192,7 @@ export class NFe {
         message: 'Serviço em Operação',
         online: true
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao consultar status do serviço:', error);
       return {
         success: false,
