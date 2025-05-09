@@ -3,7 +3,7 @@ import { Plus, Search, FileText, AlertTriangle, FileCheck, CheckCircle, XCircle,
 import { supabase } from '../lib/supabase';
 import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
-import { NFe } from '../services/nfe';
+import { emitirNfe } from '@/lib/nfe/emitirNfe';
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -442,7 +442,7 @@ function SalesOrders() {
       };
 
       // Emit NFe
-      const nfeResult = await nfeService.emitir(nfeData);
+      const nfeResult = await emitirNFe(xmlAssinado);
       if (!nfeResult.success) {
         throw new Error(nfeResult.message || 'Erro ao emitir NFe');
       }

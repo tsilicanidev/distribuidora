@@ -14,11 +14,13 @@ interface Order {
   created_at: string;
 }
 
-export function SalesOrder() {
+  export function SalesOrder() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = React.useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+
 
   useEffect(() => {
     fetchOrders();
@@ -76,17 +78,29 @@ export function SalesOrder() {
   };
 
   const handleApprove = async (orderId: string) => {
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('sales_orders')
-        .update({ status: 'approved' })
-        .eq('id', orderId);
+      const res = await fetch('/api/nfe/emitir', {
+        method: 'POST',
+        body: JSON.stringify({ orderId }),
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-      if (error) throw error;
-      fetchOrders();
-    } catch (error) {
-      console.error('Error approving order:', error);
-      setError('Erro ao aprovar pedido');
+      const result = await res.json();
+      if (result.sucesso) {
+         const chave = result.chave;
+  alert('✅ NF-e emitida com sucesso!\nChave: ' + chave);
+
+  // Abre automaticamente o XML e DANFE
+  window.open(`/api/nfe/danfe/${chave}`, '_blank');
+   window.open(`/api/nfe/xml/${chave}`, '_blank');
+      } else {
+        alert('❌ Erro na emissão da NF-e:\n' + (result.resposta || result.erro));
+      }
+    } catch (err: any) {
+      alert('❌ Falha na requisição: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -200,6 +214,7 @@ export function SalesOrder() {
                       <>
                         <button
                           onClick={() => handleApprove(order.id)}
+                          disabled={loading}
                           className="text-green-600 hover:text-green-900 mr-3"
                           title="Aprovar"
                         >
