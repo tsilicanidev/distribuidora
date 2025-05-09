@@ -13,8 +13,8 @@ const supabase = createClient(
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { chave } = req.query;
 
-  if (!chave || typeof chave !== 'string') {
-    return res.status(400).json({ erro: 'Chave inválida' });
+  if (!chave || typeof chave !== 'string' || chave.length !== 44) {
+    return res.status(400).json({ erro: 'Chave inválida (deve conter 44 dígitos)' });
   }
 
   try {
