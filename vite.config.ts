@@ -14,5 +14,14 @@ export default defineConfig({
   },
   define: {
     'process.env': {}
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5173',
+        changeOrigin: true,
+        rewrite: (path) => path
+      }
+    }
   }
 });
