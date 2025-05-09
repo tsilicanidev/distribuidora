@@ -13,6 +13,6 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   define: {
-    'process.env': process.env
+    'process.env': {}
   }
 });
