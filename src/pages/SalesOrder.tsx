@@ -14,13 +14,11 @@ interface Order {
   created_at: string;
 }
 
-  export function SalesOrder() {
+export function SalesOrder() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-
 
   useEffect(() => {
     fetchOrders();
@@ -88,12 +86,12 @@ interface Order {
 
       const result = await res.json();
       if (result.sucesso) {
-         const chave = result.chave;
-  alert('✅ NF-e emitida com sucesso!\nChave: ' + chave);
+        const chave = result.chave;
+        alert('✅ NF-e emitida com sucesso!\nChave: ' + chave);
 
-  // Abre automaticamente o XML e DANFE
-  window.open(`/api/nfe/danfe/${chave}`, '_blank');
-   window.open(`/api/nfe/xml/${chave}`, '_blank');
+        // Abre automaticamente o XML e DANFE
+        window.open(`/api/nfe/danfe/${chave}`, '_blank');
+        window.open(`/api/nfe/xml/${chave}`, '_blank');
       } else {
         alert('❌ Erro na emissão da NF-e:\n' + (result.resposta || result.erro));
       }
