@@ -4,8 +4,8 @@ import { gerarXmlNF, assinarXml } from '@/services/gerarXmlAssinar';
 import { emitirNFe } from '@/lib/nfe/emitirNfe';
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_SERVICE_KEY!
+  import.meta.env.VITE_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_SERVICE_KEY!
 );
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

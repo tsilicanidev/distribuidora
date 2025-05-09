@@ -4,11 +4,10 @@ import { Readable } from 'stream';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import { XMLParser } from 'fast-xml-parser';
-import 'dotenv/config';
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_SERVICE_KEY!
+  import.meta.env.VITE_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_SERVICE_KEY!
 );
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -6,10 +6,13 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'), // <-- Adiciona suporte ao @
+      '@': path.resolve(__dirname, 'src'),
     },
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  define: {
+    'process.env': process.env
+  }
 });

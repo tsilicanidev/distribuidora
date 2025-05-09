@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import { salvarXmlAutorizado } from '@/lib/nfe/salvarXml';
@@ -9,7 +8,7 @@ export const emitirNFe = async (xmlAssinado: string): Promise<{
   resposta?: string;
   motivo?: string;
 }> => {
-  const endpoint = process.env.VITE_SEFAZ_API_URL!;
+  const endpoint = import.meta.env.VITE_SEFAZ_API_URL!;
   const envelope = `
   <soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:nfe="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4">
