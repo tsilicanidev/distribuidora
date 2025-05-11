@@ -145,12 +145,12 @@ function Overview() {
           setLowStockProducts(lowStock || []);
         }
 
-        // Fetch pending orders
+        // Fetch pending orders - Fixed the relationship specification
         const { data: pending, error: pendingError } = await supabase
           .from('sales_orders')
           .select(`
             *,
-            customer:customers(razao_social)
+            customer:customers!sales_orders_customer_id_fkey(razao_social)
           `)
           .eq('status', 'pending')
           .order('created_at', { ascending: false });
