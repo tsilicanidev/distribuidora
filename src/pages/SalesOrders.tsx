@@ -313,7 +313,7 @@ function SalesOrders() {
         .from('sales_orders')
         .select(`
           *,
-          customer:customers(
+          customer:customers!sales_orders_customer_id_fkey(
             id,
             razao_social,
             cpf_cnpj,

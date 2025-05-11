@@ -43,8 +43,6 @@ export function InvoiceEntry() {
     total_price: 0,
   }]);
 
-  const nfeService = new NFe();
-
   useEffect(() => {
     fetchData();
   }, []);
