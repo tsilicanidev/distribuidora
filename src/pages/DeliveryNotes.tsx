@@ -14,6 +14,7 @@ interface DeliveryNote {
   helper_name: string;
   status: string;
   created_at: string;
+  customer_name?: string; // Added for customer name
 }
 
 interface OrderItem {
@@ -41,7 +42,8 @@ export function DeliveryNotes() {
 
   async function fetchDeliveryNotes() {
     try {
-      const { data, error } = await supabase
+      // First get all delivery notes with vehicle info
+      const { data: notesData, error: notesError } = await supabase
         .from('delivery_notes')
         .select(`
           *,
@@ -49,8 +51,40 @@ export function DeliveryNotes() {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setDeliveryNotes(data || []);
+      if (notesError) throw notesError;
+
+      // For each delivery note, get the first customer name from its items
+      const notesWithCustomers = await Promise.all((notesData || []).map(async (note) => {
+        // Get the first delivery note item
+        const { data: items, error: itemsError } = await supabase
+          .from('delivery_note_items')
+          .select(`
+            order_id
+          `)
+          .eq('delivery_note_id', note.id)
+          .limit(1);
+
+        if (itemsError || !items || items.length === 0) {
+          return { ...note, customer_name: 'N/A' };
+        }
+
+        // Get the order with customer info
+        const { data: order, error: orderError } = await supabase
+          .from('sales_orders')
+          .select(`
+            customer:customers(razao_social)
+          `)
+          .eq('id', items[0].order_id)
+          .single();
+
+        if (orderError || !order || !order.customer) {
+          return { ...note, customer_name: 'N/A' };
+        }
+
+        return { ...note, customer_name: order.customer.razao_social };
+      }));
+
+      setDeliveryNotes(notesWithCustomers || []);
       setError(null);
     } catch (error) {
       console.error('Erro ao buscar romaneios:', error);
@@ -714,7 +748,8 @@ export function DeliveryNotes() {
   const filteredNotes = deliveryNotes.filter(note =>
     note.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     note.vehicle?.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (note.helper_name && note.helper_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (note.helper_name && note.helper_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (note.customer_name && note.customer_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -765,6 +800,9 @@ export function DeliveryNotes() {
                   Número/Data
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Veículo/Ajudante
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -784,6 +822,11 @@ export function DeliveryNotes() {
                     </div>
                     <div className="text-sm text-gray-500">
                       {new Date(note.date).toLocaleDateString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {note.customer_name || 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
