@@ -83,7 +83,9 @@ function formatarCpfCnpj(documento: string) {
 // Função para gerar XML da NFe
 async function gerarXmlNFe(order: any, items: any[], customer: any) {
   try {
+ console.log('🧾 Pedido:', order);
     console.log('📦 Dados do cliente:', customer);
+   
     if (!customer || !customer.cpf_cnpj || !customer.razao_social) {
       throw new Error('Dados do cliente ausentes ou incompletos para gerar o XML da NFe');
     }
