@@ -275,12 +275,13 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
   try {
     // Buscar dados do pedido
     const { data: order, error: orderError } = await supabase
-      .from('sales_orders')
-      .select(`
-        *,
-        customer:customers(*)
-      `)
-      .eq('id', orderId);
+  .from('sales_orders')
+  .select(`
+    *,
+    customer:customers(*)
+  `)
+  .eq('id', orderId)
+  .single(); // ✅ Garante que retornará apenas um registro
 
     if (orderError || !order) {
       throw new Error('Pedido não encontrado');
