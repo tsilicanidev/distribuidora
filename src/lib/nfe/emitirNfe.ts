@@ -280,8 +280,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
         *,
         customer:customers(*)
       `)
-      .eq('id', orderId)
-      .maybeSingle();
+      .eq('id', orderId);
 
     if (orderError || !order) {
       throw new Error('Pedido não encontrado');
