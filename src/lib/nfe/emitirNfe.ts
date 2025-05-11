@@ -75,18 +75,12 @@ function formatarCpfCnpj(documento: string) {
 // Função para gerar XML da NFe
 async function gerarXmlNFe(order: any, items: any[]) {
   try {
-<<<<<<< HEAD
     if (!order || !order.customer) {
       throw new Error('Dados do pedido ausentes ou incompletos para gerar o XML da NFe');
     }
 
     const customer = order.customer;
     
-=======
- console.log('🧾 Pedido:', order);
-    console.log('📦 Dados do cliente:', customer);
-   
->>>>>>> 5818a67869be96f00197a1e587c48fc19ed9db00
     if (!customer || !customer.cpf_cnpj || !customer.razao_social) {
       throw new Error('Dados do cliente ausentes ou incompletos para gerar o XML da NFe');
     }
@@ -276,13 +270,13 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
   try {
     // Buscar dados do pedido
     const { data: order, error: orderError } = await supabase
-  .from('sales_orders')
-  .select(`
-    *,
-    customer:customers(*)
-  `)
-  .eq('id', orderId)
-  .single(); // ✅ Garante que retornará apenas um registro
+      .from('sales_orders')
+      .select(`
+        *,
+        customer:customers(*)
+      `)
+      .eq('id', orderId)
+      .single();
 
     if (orderError || !order) {
       throw new Error('Pedido não encontrado');
@@ -329,7 +323,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
         .from('products')
         .select('stock_quantity')
         .eq('id', item.product_id)
-        
+        .single();
 
       if (productError || !product) {
         throw new Error(`Produto ${item.product.name} não encontrado`);
