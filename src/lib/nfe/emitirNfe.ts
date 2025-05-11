@@ -327,7 +327,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
         .from('products')
         .select('stock_quantity')
         .eq('id', item.product_id)
-        .single();
+        
 
       if (productError || !product) {
         throw new Error(`Produto ${item.product.name} não encontrado`);
