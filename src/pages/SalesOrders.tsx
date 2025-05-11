@@ -5,7 +5,6 @@ import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
 import { processarEmissaoNFe } from '../lib/nfe/emitirNfe';
 
-
 interface OrderItem {
   id: string;
   product: {
@@ -349,6 +348,21 @@ function SalesOrders() {
     setError(null);
 
     try {
+      // Verificar se o pedido ainda existe e está pendente
+      const { data: currentOrder, error: orderError } = await supabase
+        .from('sales_orders')
+        .select('id, status')
+        .eq('id', order.id)
+        .single();
+
+      if (orderError || !currentOrder) {
+        throw new Error('Pedido não encontrado ou foi removido');
+      }
+
+      if (currentOrder.status !== 'pending') {
+        throw new Error('Este pedido não está mais pendente');
+      }
+
       // Processar emissão da NFe
       const resultado = await processarEmissaoNFe(order.id);
       
@@ -357,7 +371,7 @@ function SalesOrders() {
       }
       
       // Atualizar a lista de pedidos
-      fetchOrders();
+      await fetchOrders();
       
       // Abrir DANFE em nova janela
       if (resultado.chave) {

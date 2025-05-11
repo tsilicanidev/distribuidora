@@ -268,17 +268,22 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
   protocolo?: string;
 }> {
   try {
-    // Buscar dados do pedido
+    // Buscar dados do pedido com relacionamentos
     const { data: order, error: orderError } = await supabase
       .from('sales_orders')
       .select(`
         *,
-        customer:customers(*)
+        customer:customers!sales_orders_customer_id_fkey(*)
       `)
       .eq('id', orderId)
       .single();
 
-    if (orderError || !order) {
+    if (orderError) {
+      console.error('Erro ao buscar pedido:', orderError);
+      throw new Error('Erro ao buscar pedido');
+    }
+
+    if (!order) {
       throw new Error('Pedido não encontrado');
     }
 
