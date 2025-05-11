@@ -68,11 +68,11 @@ export function DeliveryNotes() {
           return { ...note, customer_name: 'N/A' };
         }
 
-        // Get the order with customer info
+        // Get the order with customer info - Fixed the relationship specification
         const { data: order, error: orderError } = await supabase
           .from('sales_orders')
           .select(`
-            customer:customers(razao_social)
+            customer:customers!sales_orders_customer_id_fkey(razao_social)
           `)
           .eq('id', items[0].order_id)
           .single();
@@ -186,13 +186,13 @@ export function DeliveryNotes() {
       // Fetch order details for each item
       const orderDetails = [];
       for (const item of items || []) {
-        // Get order details
+        // Get order details - Fixed the relationship specification
         const { data: order, error: orderError } = await supabase
           .from('sales_orders')
           .select(`
             id,
             number,
-            customer:customers(razao_social, endereco, bairro, cidade, estado),
+            customer:customers!sales_orders_customer_id_fkey(razao_social, endereco, bairro, cidade, estado),
             seller:profiles(full_name),
             total_amount,
             payment_method,
