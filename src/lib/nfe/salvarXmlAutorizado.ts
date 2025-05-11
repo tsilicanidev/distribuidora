@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function salvarXmlAutorizado({
   chave,
@@ -9,21 +9,16 @@ export async function salvarXmlAutorizado({
   protocolo: string;
   xml: string;
 }): Promise<{ sucesso: boolean; erro?: string }> {
-  try {
-    const { error } = await supabase.from('fiscal_invoices').update({
-      xml_url: `/api/nfe/xml/${chave}`,
-      pdf_url: `/api/nfe/danfe/${chave}`
-    }).eq('number', chave.substring(0, 9));
+  const { error } = await supabase.from('nfe_autorizadas').insert({
+    chave,
+    protocolo,
+    xml,
+  });
 
-    if (error) {
-      console.error('Erro ao salvar XML:', error.message);
-      return { sucesso: false, erro: error.message };
-    }
-
-    return { sucesso: true };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('Erro ao salvar XML autorizado:', errorMessage);
-    return { sucesso: false, erro: errorMessage };
+  if (error) {
+    console.error('Erro ao salvar XML:', error.message);
+    return { sucesso: false, erro: error.message };
   }
+
+  return { sucesso: true };
 }
