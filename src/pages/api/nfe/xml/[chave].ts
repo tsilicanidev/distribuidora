@@ -1,5 +1,4 @@
 import { supabase } from '../../../../lib/supabase';
-import type { NextApiRequest, NextApiResponse } from 'next';
 
 function escapeXml(str: string): string {
   return String(str)

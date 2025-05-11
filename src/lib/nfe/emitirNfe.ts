@@ -24,22 +24,17 @@ export function generateNFeKey(): string {
   const dataEmissao = new Date();
   const aamm = dataEmissao.getFullYear().toString().substring(2) + 
                (dataEmissao.getMonth() + 1).toString().padStart(2, '0');
-  if (!CNPJ_EMPRESA || CNPJ_EMPRESA.replace(/\D/g, '').length !== 14) {
-  throw new Error('❌ CNPJ_EMPRESA inválido ou ausente.');
-}
-const cnpj = CNPJ_EMPRESA.replace(/\D/g, '');
+  
+  const cnpj = CNPJ_EMPRESA.replace(/\D/g, '');
   const modelo = '55';
   const serie = '001';
   const numero = Math.floor(Math.random() * 1_000_000_000).toString().padStart(9, '0');
   const tipoEmissao = '1';
-
-  if (!CNPJ_EMPRESA) {
-  throw new Error('❌ ENV VITE_EMPRESA_CNPJ não está definido!');
-}
   const cNF = Math.floor(Math.random() * 100_000_000).toString().padStart(8, '0');
-const chaveBase = uf + aamm + cnpj + modelo + serie + numero + tipoEmissao + cNF;
+  
+  const chaveBase = uf + aamm + cnpj + modelo + serie + numero + tipoEmissao + cNF;
 
-   // Cálculo do DV (dígito verificador) com módulo 11
+  // Cálculo do DV (dígito verificador) com módulo 11
   const reversed = chaveBase.split('').reverse();
   const pesos = [2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -53,9 +48,6 @@ const chaveBase = uf + aamm + cnpj + modelo + serie + numero + tipoEmissao + cNF
 
   return chaveBase + dv.toString();
 }
-
-
-
 
 // Função para formatar CNPJ
 function formatarCNPJ(cnpj: string) {
@@ -81,8 +73,14 @@ function formatarCpfCnpj(documento: string) {
 }
 
 // Função para gerar XML da NFe
-async function gerarXmlNFe(order: any, items: any[], customer: any) {
+async function gerarXmlNFe(order: any, items: any[]) {
   try {
+    if (!order || !order.customer) {
+      throw new Error('Dados do pedido ausentes ou incompletos para gerar o XML da NFe');
+    }
+
+    const customer = order.customer;
+    
     if (!customer || !customer.cpf_cnpj || !customer.razao_social) {
       throw new Error('Dados do cliente ausentes ou incompletos para gerar o XML da NFe');
     }
@@ -343,14 +341,29 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       if (updateError) {
         throw new Error(`Erro ao atualizar estoque do produto ${item.product.name}`);
       }
+      
+      // Registrar movimentação de estoque
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error: movementError } = await supabase
+        .from('stock_movements')
+        .insert([{
+          product_id: item.product_id,
+          quantity: item.quantity,
+          type: 'OUT',
+          reference_id: orderId,
+          created_by: user?.id
+        }]);
+
+      if (movementError) {
+        console.error('Erro ao registrar movimentação de estoque:', movementError);
+      }
     }
 
-    
-
     // Gerar XML da NFe
-    const { xml, chave } = await gerarXmlNFe(order, items); // Função que você já implementou
+    const { xml, chave } = await gerarXmlNFe(order, items);
 
-    // Transmitir para SEFAZ (com correção do escopo)
+    // Transmitir para SEFAZ
     let resultado;
     try {
       resultado = await transmitirNFe(xml, chave);
