@@ -313,17 +313,7 @@ function SalesOrders() {
         .from('sales_orders')
         .select(`
           *,
-          customer:customers!sales_orders_customer_id_fkey(
-            id,
-            razao_social,
-            cpf_cnpj,
-            ie,
-            endereco,
-            bairro,
-            cidade,
-            estado,
-            cep
-          ),
+          customer:customers!sales_orders_customer_id_fkey(*),
           seller:profiles(
             full_name,
             commission_rate
@@ -345,6 +335,11 @@ function SalesOrders() {
   }
 
   const handleApproveOrder = async (order: SalesOrder) => {
+    if (!order?.id) {
+      setError('ID do pedido inválido');
+      return;
+    }
+
     if (!isManager && !isAdmin) {
       setError('Você não tem permissão para aprovar pedidos');
       return;
