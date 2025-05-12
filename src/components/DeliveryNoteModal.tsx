@@ -218,7 +218,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
         .select(`
           id,
           number,
-          customer:customers(razao_social, endereco, bairro, cidade, estado, cep),
+          customer:customers!sales_orders_customer_id_fkey(razao_social, endereco, bairro, cidade, estado, cep),
           total_amount,
           payment_method,
           due_date

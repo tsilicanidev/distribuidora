@@ -1,5 +1,5 @@
-import { supabase } from '../supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '../supabase';
 import { create } from 'xmlbuilder2';
 import { DOMParser } from 'xmldom';
 import { transmitirNFe } from './transmitirNfe';
@@ -268,7 +268,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
   protocolo?: string;
 }> {
   try {
-    // Buscar dados do pedido com relacionamentos
+    // Buscar dados do pedido com relacionamentos explícitos
     const { data: order, error: orderError } = await supabase
       .from('sales_orders')
       .select(`
@@ -309,7 +309,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       };
     }
 
-    // Buscar itens do pedido com relacionamento correto
+    // Buscar itens do pedido com relacionamento explícito
     const { data: items, error: itemsError } = await supabase
       .from('sales_order_items')
       .select(`
