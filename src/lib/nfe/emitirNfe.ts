@@ -315,11 +315,15 @@ const { data: items, error: itemsError } = await supabase
   .select('*')
   .eq('sales_order_id', orderId);
 
+// ✅ VERIFICAÇÃO ADICIONAL
 if (itemsError || !Array.isArray(items) || items.length === 0) {
   console.error('Erro ao buscar itens do pedido:', itemsError);
   throw new Error('Itens do pedido não encontrados ou inválidos');
 }
-console.log('Items:', items)
+
+console.log('Items:', items); // útil para depuração
+
+// ✅ LAÇO SEGURO
 for (const item of items) {
   const { data: [product], error: productError } = await supabase
     .from('products')
