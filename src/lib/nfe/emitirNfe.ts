@@ -309,7 +309,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       };
     }
 
-    // Buscar itens do pedido
+    // Buscar itens do pedido com relacionamento correto
     const { data: items, error: itemsError } = await supabase
       .from('sales_order_items')
       .select(`
@@ -318,7 +318,13 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       `)
       .eq('sales_order_id', orderId);
 
-    if (itemsError || !items || items.length === 0) {
+    if (itemsError) {
+      console.error('Erro ao buscar itens do pedido:', itemsError);
+      throw new Error('Erro ao buscar itens do pedido');
+    }
+
+    if (!items || items.length === 0) {
+      console.error('Nenhum item encontrado para o pedido:', orderId);
       throw new Error('Itens do pedido não encontrados');
     }
 
@@ -330,7 +336,12 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
         .eq('id', item.product_id)
         .single();
 
-      if (productError || !product) {
+      if (productError) {
+        console.error('Erro ao buscar produto:', productError);
+        throw new Error(`Erro ao buscar produto ${item.product.name}`);
+      }
+
+      if (!product) {
         throw new Error(`Produto ${item.product.name} não encontrado`);
       }
 
@@ -344,11 +355,17 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
         .eq('id', item.product_id);
 
       if (updateError) {
+        console.error('Erro ao atualizar estoque:', updateError);
         throw new Error(`Erro ao atualizar estoque do produto ${item.product.name}`);
       }
       
       // Registrar movimentação de estoque
       const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error('Usuário não autenticado');
+        throw new Error('Usuário não autenticado');
+      }
       
       const { error: movementError } = await supabase
         .from('stock_movements')
@@ -357,7 +374,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
           quantity: item.quantity,
           type: 'OUT',
           reference_id: orderId,
-          created_by: user?.id
+          created_by: user.id
         }]);
 
       if (movementError) {
@@ -390,6 +407,11 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
     // Registrar NFe no banco de dados
     const { data: { user } } = await supabase.auth.getUser();
 
+    if (!user) {
+      console.error('Usuário não autenticado');
+      throw new Error('Usuário não autenticado');
+    }
+
     const { error: fiscalInvoiceError } = await supabase
       .from('fiscal_invoices')
       .insert([{
@@ -400,7 +422,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
         total_amount: order.total_amount,
         tax_amount: order.total_amount * 0.18, // Exemplo fixo
         status: 'issued',
-        created_by: user?.id,
+        created_by: user.id,
         xml_url: `/api/nfe/xml/${resultado.chave || chave}`,
         pdf_url: `/api/nfe/danfe/${resultado.chave || chave}`
       }]);
