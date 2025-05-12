@@ -310,32 +310,32 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
     }
 
     // Buscar itens do pedido com relacionamento explícito
-const { data: items, error: itemsError } = await supabase
-  .from('sales_order_items')
-  .select('*')
-  .eq('sales_order_id', orderId);
+    const { data: items, error: itemsError } = await supabase
+      .from('sales_order_items')
+      .select('*')
+      .eq('sales_order_id', orderId);
 
-// ✅ VERIFICAÇÃO ADICIONAL
-if (itemsError || !Array.isArray(items) || items.length === 0) {
-  console.error('Erro ao buscar itens do pedido:', itemsError);
-  throw new Error('Itens do pedido não encontrados ou inválidos');
-}
+    // ✅ VERIFICAÇÃO ADICIONAL
+    if (itemsError || !Array.isArray(items) || items.length === 0) {
+      console.error('Erro ao buscar itens do pedido:', itemsError);
+      throw new Error('Itens do pedido não encontrados ou inválidos');
+    }
 
-console.log('Items:', items); // útil para depuração
+    console.log('Items:', items); // útil para depuração
 
-// ✅ LAÇO SEGURO
-for (const item of items) {
-  const { data: [product], error: productError } = await supabase
-    .from('products')
-    .select('*')
-    .eq('id', item.product_id);
+    // ✅ LAÇO SEGURO
+    for (const item of items) {
+      const { data: [product], error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', item.product_id);
 
-  if (productError || !product) {
-    throw new Error(`Erro ao buscar produto para item ${item.id}`);
-  }
+      if (productError || !product) {
+        throw new Error(`Erro ao buscar produto para item ${item.id}`);
+      }
 
-  item.product = product;
-}
+      item.product = product;
+    }
 
     if (itemsError) {
       console.error('Erro ao buscar itens do pedido:', itemsError);
@@ -431,27 +431,61 @@ for (const item of items) {
       throw new Error('Usuário não autenticado');
     }
 
-    const { error: fiscalInvoiceError } = await supabase
+    // Verificar se já existe uma nota fiscal com o mesmo número
+    const { data: existingInvoice } = await supabase
       .from('fiscal_invoices')
-      .insert([{
-        number: order.number,
-        series: '1',
-        issue_date: new Date().toISOString(),
-        customer_id: order.customer_id,
-        total_amount: order.total_amount,
-        tax_amount: order.total_amount * 0.18, // Exemplo fixo
-        status: 'issued',
-        created_by: user.id,
-        xml_url: `/api/nfe/xml/${resultado.chave || chave}`,
-        pdf_url: `/api/nfe/danfe/${resultado.chave || chave}`
-      }]);
+      .select('id')
+      .eq('number', order.number)
+      .maybeSingle();
 
-    if (fiscalInvoiceError) {
-      console.error('Erro ao registrar nota fiscal:', fiscalInvoiceError);
-      return {
-        sucesso: false,
-        motivo: 'Erro ao registrar nota fiscal'
-      };
+    if (existingInvoice) {
+      console.log('Nota fiscal já existe, atualizando...');
+      const { error: updateError } = await supabase
+        .from('fiscal_invoices')
+        .update({
+          series: '1',
+          issue_date: new Date().toISOString(),
+          customer_id: order.customer_id,
+          total_amount: order.total_amount,
+          tax_amount: order.total_amount * 0.18, // Exemplo fixo
+          status: 'issued',
+          created_by: user.id,
+          xml_url: `/api/nfe/xml/${resultado.chave || chave}`,
+          pdf_url: `/api/nfe/danfe/${resultado.chave || chave}`
+        })
+        .eq('id', existingInvoice.id);
+
+      if (updateError) {
+        console.error('Erro ao atualizar nota fiscal:', updateError);
+        return {
+          sucesso: false,
+          motivo: 'Erro ao atualizar nota fiscal'
+        };
+      }
+    } else {
+      // Criar nova nota fiscal
+      const { error: fiscalInvoiceError } = await supabase
+        .from('fiscal_invoices')
+        .insert([{
+          number: order.number,
+          series: '1',
+          issue_date: new Date().toISOString(),
+          customer_id: order.customer_id,
+          total_amount: order.total_amount,
+          tax_amount: order.total_amount * 0.18, // Exemplo fixo
+          status: 'issued',
+          created_by: user.id,
+          xml_url: `/api/nfe/xml/${resultado.chave || chave}`,
+          pdf_url: `/api/nfe/danfe/${resultado.chave || chave}`
+        }]);
+
+      if (fiscalInvoiceError) {
+        console.error('Erro ao registrar nota fiscal:', fiscalInvoiceError);
+        return {
+          sucesso: false,
+          motivo: 'Erro ao registrar nota fiscal'
+        };
+      }
     }
 
     // Atualizar status do pedido

@@ -367,8 +367,8 @@ function SalesOrders() {
       // Processar emissão da NFe
       const resultado = await processarEmissaoNFe(order.id);
       
-      if (!resultado.sucesso) {
-        throw new Error(resultado.motivo || 'Erro ao emitir NFe');
+      if (!resultado?.sucesso) {
+        throw new Error(resultado?.motivo || 'Erro ao emitir NFe');
       }
       
       // Atualizar a lista de pedidos
