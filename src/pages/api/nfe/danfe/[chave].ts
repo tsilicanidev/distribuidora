@@ -345,11 +345,6 @@ res.setHeader('Content-Disposition', `inline; filename="danfe_${chave}.pdf"`);
 res.send(pdfBuffer);
   } catch (error) {
     console.error('Erro ao gerar DANFE:', error);
-    return new Response(JSON.stringify({ error: 'Erro ao gerar DANFE' }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    res.status(500).json({ error: 'Erro ao gerar DANFE' });
   }
 }
