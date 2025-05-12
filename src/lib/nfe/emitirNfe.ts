@@ -466,6 +466,21 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       // Criar nova nota fiscal
       const { error: fiscalInvoiceError } = await supabase
         .from('fiscal_invoices')
+        const { data: existente } = await supabase
+  .from('fiscal_invoices')
+  .select('id')
+  .eq('number', order.number)
+  .eq('series', '1')
+  .maybeSingle(); // evitar erro se não existir
+
+if (existente) {
+  console.warn('Nota fiscal já existente com mesmo número e série');
+  return {
+    sucesso: false,
+    motivo: 'Nota fiscal já registrada anteriormente.'
+  };
+}
+
         .insert([{
           number: order.number,
           series: '1',
