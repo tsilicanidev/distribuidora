@@ -178,32 +178,18 @@ async function buscarDadosNFe(chave: string) {
 
 // Função para gerar o DANFE
 export default async function handler(req: any, res: any) {
-  // Obter a chave da NFe da URL
-  const { chave } = req.params;
-  
-  // Validar a chave
-  if (!validarChaveNFe(chave)) {
-    return new Response(JSON.stringify({ error: 'Chave de NFe inválida' }), {
-      status: 400,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+  // ⚠️ Correção essencial: usar req.query no lugar de req.params
+  const { chave } = req.query;
+
+  if (typeof chave !== 'string' || !validarChaveNFe(chave)) {
+    return res.status(400).json({ error: 'Chave de NFe inválida' });
   }
-  
+
   try {
-    // Buscar dados da NFe
     const { fiscalInvoice, items } = await buscarDadosNFe(chave);
-    
-    // Gerar QR Code
     const qrCodeDataUrl = await gerarQRCode(chave);
-    
-    // Criar o PDF
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     
     // Configurações
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -340,10 +326,9 @@ const tableData = items
     
     // Converter o PDF para um blob
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-res.setHeader('Content-Type', 'application/pdf');
-res.setHeader('Content-Disposition', `inline; filename="danfe_${chave}.pdf"`);
-    console.log('🔧 DANFE finalizado com sucesso');
-res.send(pdfBuffer);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="danfe_${chave}.pdf"`);
+    res.send(pdfBuffer);
   } catch (error) {
     console.error('Erro ao gerar DANFE:', error);
     res.status(500).json({ error: 'Erro ao gerar DANFE' });
