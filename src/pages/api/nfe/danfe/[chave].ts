@@ -342,6 +342,7 @@ const tableData = items
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
 res.setHeader('Content-Type', 'application/pdf');
 res.setHeader('Content-Disposition', `inline; filename="danfe_${chave}.pdf"`);
+    console.log('🔧 DANFE finalizado com sucesso');
 res.send(pdfBuffer);
   } catch (error) {
     console.error('Erro ao gerar DANFE:', error);
