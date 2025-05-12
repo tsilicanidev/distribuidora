@@ -319,7 +319,7 @@ if (itemsError || !Array.isArray(items) || items.length === 0) {
   console.error('Erro ao buscar itens do pedido:', itemsError);
   throw new Error('Itens do pedido não encontrados ou inválidos');
 }
-
+console.log('Items:', items)
 for (const item of items) {
   const { data: [product], error: productError } = await supabase
     .from('products')
