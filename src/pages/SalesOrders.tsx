@@ -5,6 +5,7 @@ import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
 import { processarEmissaoNFe } from '../lib/nfe/emitirNfe';
 
+
 interface OrderItem {
   id: string;
   product: {
