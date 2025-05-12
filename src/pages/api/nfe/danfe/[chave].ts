@@ -284,14 +284,24 @@ export default async function handler(req: any, res: any) {
     ];
     
     // Dados da tabela
-    const tableData = items.map(item => ({
+
+    if (!item.product || !item.product.name) {
+  console.warn('Produto não encontrado para item:', item);
+  return null;
+}
+const tableData = items
+  .map(item => {
+    if (!item.product) return null;
+    return {
       codigo: item.product_id.substring(0, 8),
       descricao: item.product.name,
       qtd: item.quantity.toString(),
       un: item.product.unit || 'UN',
       vlUnit: `R$ ${item.unit_price.toFixed(2)}`,
       vlTotal: `R$ ${item.total_price.toFixed(2)}`
-    }));
+    };
+  })
+  .filter(Boolean);
     
     // Adicionar tabela
     (doc as any).autoTable({
