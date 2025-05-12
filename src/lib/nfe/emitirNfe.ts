@@ -318,6 +318,19 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       `)
       .eq('sales_order_id', orderId);
 
+    for (const item of items) {
+  const { data: [product], error: productError } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', item.product_id);
+
+  if (productError || !product) {
+    throw new Error(`Erro ao buscar produto para item ${item.id}`);
+  }
+
+  item.product = product; // adiciona manualmente no objeto do item
+}
+
     if (itemsError) {
       console.error('Erro ao buscar itens do pedido:', itemsError);
       throw new Error('Erro ao buscar itens do pedido');
