@@ -339,16 +339,10 @@ const tableData = items
     doc.text(`Emitido em: ${new Date().toLocaleString()}`, pageWidth / 2, rodapeY, { align: 'center' });
     
     // Converter o PDF para um blob
-    const pdfBlob = doc.output('blob');
-    
-    // Retornar o PDF
-    return new Response(pdfBlob, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="danfe_${chave}.pdf"`
-      }
-    });
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+res.setHeader('Content-Type', 'application/pdf');
+res.setHeader('Content-Disposition', `inline; filename="danfe_${chave}.pdf"`);
+res.send(pdfBuffer);
   } catch (error) {
     console.error('Erro ao gerar DANFE:', error);
     return new Response(JSON.stringify({ error: 'Erro ao gerar DANFE' }), {
