@@ -310,15 +310,17 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
     }
 
     // Buscar itens do pedido com relacionamento explícito
-    const { data: items, error: itemsError } = await supabase
-      .from('sales_order_items')
-      .select(`
-        *,
-        product:products(*)
-      `)
-      .eq('sales_order_id', orderId);
+const { data: items, error: itemsError } = await supabase
+  .from('sales_order_items')
+  .select('*')
+  .eq('sales_order_id', orderId);
 
-    for (const item of items) {
+if (itemsError || !Array.isArray(items) || items.length === 0) {
+  console.error('Erro ao buscar itens do pedido:', itemsError);
+  throw new Error('Itens do pedido não encontrados ou inválidos');
+}
+
+for (const item of items) {
   const { data: [product], error: productError } = await supabase
     .from('products')
     .select('*')
@@ -328,7 +330,7 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
     throw new Error(`Erro ao buscar produto para item ${item.id}`);
   }
 
-  item.product = product; // adiciona manualmente no objeto do item
+  item.product = product;
 }
 
     if (itemsError) {
