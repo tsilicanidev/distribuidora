@@ -285,13 +285,12 @@ export default async function handler(req: any, res: any) {
     
     // Dados da tabela
 
-    if (!item.product || !item.product.name) {
-  console.warn('Produto não encontrado para item:', item);
-  return null;
-}
 const tableData = items
   .map(item => {
-    if (!item.product) return null;
+    if (!item.product || !item.product.name) {
+      console.warn('Produto inválido:', item);
+      return null;
+    }
     return {
       codigo: item.product_id.substring(0, 8),
       descricao: item.product.name,
