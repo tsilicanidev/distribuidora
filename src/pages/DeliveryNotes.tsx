@@ -300,15 +300,15 @@ export function DeliveryNotes() {
           <style>
             @page {
               size: A4;
-              margin: 1cm;
+              margin: 0.7cm;
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
               color: #333;
-              font-size: 9pt;
-              line-height: 1.2;
+              font-size: 8pt;
+              line-height: 1.1;
             }
             .page {
               width: 100%;
@@ -318,60 +318,60 @@ export function DeliveryNotes() {
             }
             .delivery-note {
               border: 1px solid #ccc;
-              padding: 8px;
-              margin-bottom: 10px;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-              border-radius: 4px;
+              padding: 5px;
+              margin-bottom: 5px;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+              border-radius: 3px;
             }
             .header {
               text-align: center;
-              margin-bottom: 10px;
+              margin-bottom: 5px;
               border-bottom: 1px solid #FF8A00;
-              padding-bottom: 5px;
+              padding-bottom: 3px;
               color: #333;
             }
             .header h1 {
               margin: 0;
-              font-size: 14pt;
+              font-size: 12pt;
               color: #FF8A00;
             }
             .header h2 {
-              margin: 3px 0;
-              font-size: 12pt;
+              margin: 2px 0;
+              font-size: 10pt;
             }
             .info-section {
-              margin-bottom: 10px;
+              margin-bottom: 5px;
             }
             .info-section h3 {
-              margin: 3px 0;
-              font-size: 10pt;
+              margin: 2px 0;
+              font-size: 9pt;
               color: #FF8A00;
               border-bottom: 1px solid #eee;
-              padding-bottom: 2px;
+              padding-bottom: 1px;
             }
             .info-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 5px;
-              margin-bottom: 5px;
+              gap: 3px;
+              margin-bottom: 3px;
             }
             .info-item {
-              padding: 2px;
+              padding: 1px;
             }
             .info-label {
               font-weight: bold;
-              font-size: 8pt;
+              font-size: 7pt;
               color: #666;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 8px;
-              font-size: 8pt;
+              margin-bottom: 5px;
+              font-size: 7pt;
             }
             th, td {
               border: 1px solid #ddd;
-              padding: 4px;
+              padding: 2px;
               text-align: left;
             }
             th {
@@ -386,42 +386,42 @@ export function DeliveryNotes() {
               background-color: #f5f5f5;
             }
             .footer {
-              margin-top: 10px;
+              margin-top: 5px;
               text-align: center;
             }
             .signature-line {
-              margin-top: 20px;
+              margin-top: 10px;
               border-top: 1px solid #333;
-              width: 150px;
+              width: 120px;
               display: inline-block;
               text-align: center;
-              padding-top: 3px;
-              font-size: 8pt;
+              padding-top: 2px;
+              font-size: 7pt;
             }
             .delivery-notes {
               font-style: italic;
               color: #666;
-              margin-top: 2px;
-              font-size: 7pt;
+              margin-top: 1px;
+              font-size: 6pt;
             }
             .copy-label {
               text-align: right;
               font-style: italic;
-              font-size: 7pt;
-              margin-bottom: 3px;
+              font-size: 6pt;
+              margin-bottom: 2px;
               color: #666;
             }
             .company-info {
               text-align: center;
-              margin-bottom: 5px;
-              font-size: 7pt;
+              margin-bottom: 3px;
+              font-size: 6pt;
               color: #666;
             }
             .order-header {
               background-color: #f0f0f0;
-              padding: 3px;
-              border-radius: 3px;
-              margin-bottom: 3px;
+              padding: 2px;
+              border-radius: 2px;
+              margin-bottom: 2px;
               border-left: 2px solid #FF8A00;
             }
             .total-row {
@@ -430,15 +430,15 @@ export function DeliveryNotes() {
             }
             .payment-info {
               background-color: #f9f9f9;
-              padding: 3px;
-              border-radius: 3px;
-              margin-top: 3px;
+              padding: 2px;
+              border-radius: 2px;
+              margin-top: 2px;
               border: 1px dashed #ddd;
             }
             .copies-container {
               display: flex;
               flex-direction: column;
-              gap: 0.5cm;
+              gap: 0.3cm;
             }
             @media print {
               body { margin: 0; }
@@ -554,11 +554,11 @@ export function DeliveryNotes() {
                         <thead>
                           <tr>
                             <th>Produto</th>
-                            <th style="width: 40px; text-align: center;">Qtd</th>
-                            <th style="width: 40px; text-align: center;">Unid.</th>
-                            <th style="width: 40px; text-align: center;">Peso</th>
-                            <th style="width: 60px; text-align: right;">Valor Unit.</th>
-                            <th style="width: 60px; text-align: right;">Valor Total</th>
+                            <th style="width: 35px; text-align: center;">Qtd</th>
+                            <th style="width: 35px; text-align: center;">Unid.</th>
+                            <th style="width: 35px; text-align: center;">Peso</th>
+                            <th style="width: 50px; text-align: right;">V.Unit</th>
+                            <th style="width: 50px; text-align: right;">V.Total</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -568,13 +568,13 @@ export function DeliveryNotes() {
                               <td style="text-align: center;">${orderItem.quantity}</td>
                               <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
                               <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) : '-'}</td>
-                              <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
-                              <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
+                              <td style="text-align: right;">${orderItem.unit_price.toFixed(2)}</td>
+                              <td style="text-align: right;">${orderItem.total_price.toFixed(2)}</td>
                             </tr>
                           `).join('')}
                           <tr class="total-row">
                             <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
-                            <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
+                            <td style="text-align: right;"><strong>${item.order.total_amount.toFixed(2)}</strong></td>
                           </tr>
                         </tbody>
                       </table>
@@ -583,7 +583,7 @@ export function DeliveryNotes() {
 
                   <div class="info-section">
                     <h3>Observações</h3>
-                    <p>${note.notes || 'Nenhuma observação'}</p>
+                    <p style="font-size: 7pt; margin: 2px 0;">${note.notes || 'Nenhuma observação'}</p>
                   </div>
 
                   <div class="footer">
@@ -694,11 +694,11 @@ export function DeliveryNotes() {
                         <thead>
                           <tr>
                             <th>Produto</th>
-                            <th style="width: 40px; text-align: center;">Qtd</th>
-                            <th style="width: 40px; text-align: center;">Unid.</th>
-                            <th style="width: 40px; text-align: center;">Peso</th>
-                            <th style="width: 60px; text-align: right;">Valor Unit.</th>
-                            <th style="width: 60px; text-align: right;">Valor Total</th>
+                            <th style="width: 35px; text-align: center;">Qtd</th>
+                            <th style="width: 35px; text-align: center;">Unid.</th>
+                            <th style="width: 35px; text-align: center;">Peso</th>
+                            <th style="width: 50px; text-align: right;">V.Unit</th>
+                            <th style="width: 50px; text-align: right;">V.Total</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -708,13 +708,13 @@ export function DeliveryNotes() {
                               <td style="text-align: center;">${orderItem.quantity}</td>
                               <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
                               <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) : '-'}</td>
-                              <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
-                              <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
+                              <td style="text-align: right;">${orderItem.unit_price.toFixed(2)}</td>
+                              <td style="text-align: right;">${orderItem.total_price.toFixed(2)}</td>
                             </tr>
                           `).join('')}
                           <tr class="total-row">
                             <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
-                            <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
+                            <td style="text-align: right;"><strong>${item.order.total_amount.toFixed(2)}</strong></td>
                           </tr>
                         </tbody>
                       </table>
@@ -723,7 +723,7 @@ export function DeliveryNotes() {
 
                   <div class="info-section">
                     <h3>Observações</h3>
-                    <p>${note.notes || 'Nenhuma observação'}</p>
+                    <p style="font-size: 7pt; margin: 2px 0;">${note.notes || 'Nenhuma observação'}</p>
                   </div>
 
                   <div class="footer">
