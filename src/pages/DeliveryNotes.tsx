@@ -300,15 +300,15 @@ export function DeliveryNotes() {
           <style>
             @page {
               size: A4;
-              margin: 0.7cm;
+              margin: 0.4cm;
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
               color: #333;
-              font-size: 8pt;
-              line-height: 1.1;
+               font-size: 6.5pt;
+  line-height: 1.05;
             }
             .page {
               width: 100%;
@@ -318,8 +318,8 @@ export function DeliveryNotes() {
             }
             .delivery-note {
               border: 1px solid #ccc;
-              padding: 5px;
-              margin-bottom: 5px;
+             padding: 3px;
+  margin-bottom: 3px;
               box-shadow: 0 1px 2px rgba(0,0,0,0.1);
               border-radius: 3px;
             }
@@ -347,13 +347,13 @@ export function DeliveryNotes() {
               font-size: 9pt;
               color: #FF8A00;
               border-bottom: 1px solid #eee;
-              padding-bottom: 1px;
+              padding-bottom: 3px;
             }
             .info-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 3px;
-              margin-bottom: 3px;
+              gap: 2px;
+              margin-bottom: 2px;
             }
             .info-item {
               padding: 1px;
@@ -366,12 +366,12 @@ export function DeliveryNotes() {
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 5px;
-              font-size: 7pt;
+              margin-bottom: 3px;
+              font-size: 6pt;
             }
             th, td {
               border: 1px solid #ddd;
-              padding: 2px;
+              padding: 1px;
               text-align: left;
             }
             th {
@@ -407,8 +407,8 @@ export function DeliveryNotes() {
             .copy-label {
               text-align: right;
               font-style: italic;
-              font-size: 6pt;
-              margin-bottom: 2px;
+              font-size: 5pt;
+              margin-bottom: 1px;
               color: #666;
             }
             .company-info {
