@@ -298,6 +298,10 @@ export function DeliveryNotes() {
         <head>
           <title>Romaneio ${note.number}</title>
           <style>
+          @media print {
+  .no-print {
+    display: none;
+  }
             @page {
   size: A4 portrait;
   margin: 0.3cm;
@@ -323,6 +327,8 @@ body {
 .delivery-note {
   max-height: 14cm; /* ou 14.2cm dependendo da margem */
   overflow: hidden;
+   page-break-inside: avoid;
+  break-inside: avoid;
 }
 
 .header h1 {
