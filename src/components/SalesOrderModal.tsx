@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Minus, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import debounce from 'lodash.debounce';
+const [searchTerm, setSearchTerm] = useState('');
 
 interface Customer {
   id: string;
@@ -153,29 +154,24 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   return () => debouncedSearch.cancel();
 }, [customerSearchTerm]);
 
-  async function fetchData() {
-    try {
-      const [
-        { data: customersData, error: customersError },
-        { data: productsData, error: productsError }
-      ] = await Promise.all([
-        supabase.from('customers').select('id, razao_social, cpf_cnpj').order('razao_social'),
-        supabase.from('products').select('*').order('name')
-      ]);
+  async function searchCustomers(term: string) {
+  try {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id, razao_social, cpf_cnpj')
+      .or(`razao_social.ilike.%${term}%,cpf_cnpj.ilike.%${term}%`)
+      .order('razao_social');
 
-      if (customersError) throw customersError;
-      if (productsError) throw productsError;
+    if (error) throw error;
 
-      setCustomers(customersData || []);
-      setProducts(productsData || []);
-      setError(null);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError('Erro ao carregar dados');
-    } finally {
-      setLoading(false);
-    }
+    setFilteredCustomers(data || []);
+    setShowCustomerDropdown(true);
+  } catch (error) {
+    console.error('Erro ao buscar clientes:', error);
+    setFilteredCustomers([]);
+    setShowCustomerDropdown(false);
   }
+}
 
   async function fetchOrderItems(orderId: string) {
     try {
