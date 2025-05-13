@@ -300,7 +300,7 @@ export function DeliveryNotes() {
           <style>
             @page {
               size: A4;
-              margin: 0.4cm;
+              margin: 1cm;
             }
             body {
               font-family: Arial, sans-serif;
