@@ -310,83 +310,154 @@ export function DeliveryNotes() {
                font-size: 7pt;
   line-height: 1.05;
             }
-@page {
-  size: A4 landscape;
-  margin: 1cm;
-}
-body {
-  font-family: Arial, sans-serif;
-  font-size: 7pt;
-  color: #333;
-  margin: 0;
-  padding: 0;
-}
-.page {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  gap: 0.5cm;
-}
-.copy {
-  width: 50%;
-  box-sizing: border-box;
-  border: 1px solid #ccc;
-  padding: 8px;
-}
-.header h1 {
-  font-size: 10pt;
-  margin: 2px 0;
-}
-.header h2 {
-  font-size: 9pt;
-  margin: 2px 0;
-}
-.copy-label {
-  font-size: 6pt;
-  font-style: italic;
-  text-align: right;
-  margin-bottom: 4px;
-}
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 6.5pt;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 2px;
-}
-.footer {
-  margin-top: 10px;
-  text-align: center;
-  font-size: 6pt;
-}
-.signature-line {
-  margin-top: 8px;
-  border-top: 1px solid #000;
-  width: 100px;
-  margin-left: auto;
-  margin-right: auto;
-}
-@media print {
-  .no-print {
-    display: none;
-  }
-}
+            .page {
+              width: 100%;
+              height: 100%;
+              display: flex;
+              flex-direction: row;
+            }
+            .delivery-note {
+              border: 1px solid #ccc;
+             padding: 3px;
+  margin-bottom: 3px;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+              border-radius: 3px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 5px;
+              border-bottom: 1px solid #FF8A00;
+              padding-bottom: 3px;
+              color: #333;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 12pt;
+              color: #FF8A00;
+            }
+            .header h2 {
+              margin: 2px 0;
+              font-size: 10pt;
+            }
+            .info-section {
+              margin-bottom: 5px;
+            }
+            .info-section h3 {
+              margin: 2px 0;
+              font-size: 9pt;
+              color: #FF8A00;
+              border-bottom: 1px solid #eee;
+              padding-bottom: 3px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 2px;
+              margin-bottom: 2px;
+            }
+            .info-item {
+              padding: 1px;
+            }
+            .info-label {
+              font-weight: bold;
+              font-size: 7pt;
+              color: #666;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 3px;
+              font-size: 6pt;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 1px;
+              text-align: left;
+            }
+            th {
+              background-color: #f8f8f8;
+              font-weight: bold;
+              color: #555;
+            }
+            tr:nth-child(even) {
+              background-color: #f9f9f9;
+            }
+            tr:hover {
+              background-color: #f5f5f5;
+            }
+            .footer {
+              margin-top: 5px;
+              text-align: center;
+            }
+            .signature-line {
+              margin-top: 10px;
+              border-top: 1px solid #333;
+              width: 120px;
+              display: inline-block;
+              text-align: center;
+              padding-top: 2px;
+              font-size: 7pt;
+            }
+            .delivery-notes {
+              font-style: italic;
+              color: #666;
+              margin-top: 1px;
+              font-size: 6pt;
+            }
+            .copy-label {
+              text-align: right;
+              font-style: italic;
+              font-size: 5pt;
+              margin-bottom: 1px;
+              color: #666;
+            }
+            .company-info {
+              text-align: center;
+              margin-bottom: 3px;
+              font-size: 6pt;
+              color: #666;
+            }
+            .order-header {
+              background-color: #f0f0f0;
+              padding: 2px;
+              border-radius: 2px;
+              margin-bottom: 2px;
+              border-left: 2px solid #FF8A00;
+            }
+            .total-row {
+              font-weight: bold;
+              background-color: #f0f0f0;
+            }
+            .payment-info {
+              background-color: #f9f9f9;
+              padding: 2px;
+              border-radius: 2px;
+              margin-top: 2px;
+              border: 1px dashed #ddd;
+            }
+            .copies-container {
+              display: flex;
+              flex-direction: column;
+              gap: 0.2cm;
+            }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+              .delivery-note {
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+                box-shadow: none;
+              }
+            }
           </style>
         </head>
         <body>
           <div class="page">
             <div class="copies-container">
               <!-- First Copy -->
-<div class="copy">
-    <div class="copy-label">1ª VIA - EMPRESA</div>
-    <div class="delivery-note">
+              <div>
+                <div class="copy-label">1ª VIA - EMPRESA</div>
+                <div class="delivery-note">
                   <div class="header">
                     <div class="company-info">
                       J&P DISTRIBUIDORA DE ALIMENTOS
@@ -524,9 +595,9 @@ th, td {
               </div>
 
               <!-- Second Copy -->
-              <div class="copy">
-    <div class="copy-label">2ª VIA - CLIENTE</div>
-    <div class="delivery-note">
+              <div>
+                <div class="copy-label">2ª VIA - CLIENTE</div>
+                <div class="delivery-note">
                   <div class="header">
                     <div class="company-info">
                       J&P DISTRIBUIDORA DE ALIMENTOS
