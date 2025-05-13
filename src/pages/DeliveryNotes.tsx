@@ -299,22 +299,22 @@ export function DeliveryNotes() {
           <title>Romaneio ${note.number}</title>
           <style>
             @page {
-              size: A4 landscape;
-              margin: 1cm;
+              size: A4;
+              margin: 0.4cm;
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
               color: #333;
-               font-size: 7pt;
+               font-size: 6.5pt;
   line-height: 1.05;
             }
             .page {
               width: 100%;
               height: 100%;
               display: flex;
-              flex-direction: row;
+              flex-direction: column;
             }
             .delivery-note {
               border: 1px solid #ccc;
