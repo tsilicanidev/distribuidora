@@ -109,32 +109,20 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   }, [formData.payment_method]);
 
 
+  
+
   useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  async function fetchCustomers() {
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('razao_social');
-
-      if (error) throw error;
-      setCustomers(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
-    } finally {
-      setLoading(false);
+    if (customerSearchTerm.trim()) {
+      // Filter customers based on search term
+      const filtered = customers.filter(customer => 
+        customer.razao_social.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+        customer.cpf_cnpj.replace(/[^\d]/g, '').includes(customerSearchTerm.replace(/[^\d]/g, ''))
+      );
+      setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers([]);
     }
-  }
-
-  const handleEdit = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setShowModal(true);
-  };
-
-
+  }, [customerSearchTerm, customers]);
 
   async function fetchData() {
     try {
