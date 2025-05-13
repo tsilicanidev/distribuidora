@@ -321,13 +321,8 @@ body {
 }
 
 .delivery-note {
-  border: 1px solid #ccc;
-  padding: 4px;
-  margin: 0;
-  box-shadow: none;
-  border-radius: 4px;
-  page-break-inside: avoid;
-  flex: 1 1 50%;
+  max-height: 14cm; /* ou 14.2cm dependendo da margem */
+  overflow: hidden;
 }
 
 .header h1 {
