@@ -62,31 +62,31 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   const [selectedDueDateOption, setSelectedDueDateOption] = useState<string | null>(null);
 
   async function searchCustomers(term: string) {
-  const sanitized = term.replace(/[^\w\s]/gi, '').trim();
+    const sanitized = term.replace(/[^\w\s]/gi, '').trim();
 
-  if (!sanitized) {
-    setFilteredCustomers([]);
-    setShowCustomerDropdown(false);
-    return;
+    if (!sanitized) {
+      setFilteredCustomers([]);
+      setShowCustomerDropdown(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, razao_social, cpf_cnpj')
+        .or(`razao_social.ilike.%${sanitized}%,cpf_cnpj.ilike.%${sanitized}%`)
+        .order('razao_social');
+
+      if (error) throw error;
+
+      setFilteredCustomers(data || []);
+      setShowCustomerDropdown(true);
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error);
+      setFilteredCustomers([]);
+      setShowCustomerDropdown(false);
+    }
   }
-
-  try {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('id, razao_social, cpf_cnpj')
-      .or(`razao_social.ilike.%${sanitized}%,cpf_cnpj.ilike.%${sanitized}%`)
-      .order('razao_social');
-
-    if (error) throw error;
-
-    setFilteredCustomers(data || []);
-    setShowCustomerDropdown(true);
-  } catch (error) {
-    console.error('Erro ao buscar clientes:', error);
-    setFilteredCustomers([]);
-    setShowCustomerDropdown(false);
-  }
-}
 
 
   useEffect(() => {
