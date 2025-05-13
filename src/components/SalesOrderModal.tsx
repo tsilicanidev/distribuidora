@@ -113,7 +113,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
     fetchCustomers();
   }, []);
 
-  async function customerSearchTerm.trim() {
+  async function fetchCustomers() {
     try {
       const { data, error } = await supabase
         .from('customers')
