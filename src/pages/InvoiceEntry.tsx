@@ -45,7 +45,22 @@ export function InvoiceEntry() {
 
   useEffect(() => {
     fetchData();
+    getNextInvoiceNumber();
   }, []);
+
+  async function getNextInvoiceNumber() {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_next_fiscal_invoice_number');
+      
+      if (error) throw error;
+      
+      setFormData(prev => ({ ...prev, number: data }));
+    } catch (error) {
+      console.error('Error getting next invoice number:', error);
+      setError('Erro ao gerar número da nota fiscal');
+    }
+  }
 
   async function fetchData() {
     try {
@@ -129,6 +144,17 @@ export function InvoiceEntry() {
         throw new Error('Adicione pelo menos um produto');
       }
 
+      // Check if invoice number already exists
+      const { data: existingInvoice } = await supabase
+        .from('fiscal_invoices')
+        .select('id')
+        .eq('number', formData.number)
+        .maybeSingle();
+
+      if (existingInvoice) {
+        throw new Error('Número de nota fiscal já existe. Gerando novo número...');
+      }
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
@@ -189,7 +215,13 @@ export function InvoiceEntry() {
         .select()
         .single();
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) {
+        if (invoiceError.code === '23505') { // Unique constraint violation
+          await getNextInvoiceNumber();
+          throw new Error('Número de nota fiscal já existe. Um novo número foi gerado. Por favor, tente novamente.');
+        }
+        throw invoiceError;
+      }
 
       // Update product stock and create stock movements
       for (const item of items) {
@@ -240,10 +272,17 @@ export function InvoiceEntry() {
       }]);
       setError(null);
 
+      // Get next invoice number for the next entry
+      await getNextInvoiceNumber();
+
       alert('Nota fiscal de entrada registrada com sucesso!');
     } catch (error) {
       console.error('Erro ao processar nota fiscal:', error);
       setError(error instanceof Error ? error.message : 'Erro ao processar nota fiscal');
+      
+      if (error instanceof Error && error.message.includes('já existe')) {
+        await getNextInvoiceNumber();
+      }
     } finally {
       setSaving(false);
     }
