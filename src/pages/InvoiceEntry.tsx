@@ -147,7 +147,7 @@ export function InvoiceEntry() {
         .from('customers')
         .select('id')
         .eq('cpf_cnpj', supplier.cnpj)
-        .single();
+        .maybeSingle();
 
       let customerId;
 
@@ -180,7 +180,7 @@ export function InvoiceEntry() {
           number: formData.number,
           series: '1',
           issue_date: formData.issue_date,
-          customer_id: customerId, // Using the correct customer ID
+          customer_id: customerId,
           total_amount: totalAmount,
           tax_amount: taxAmount,
           status: 'draft',
@@ -195,8 +195,11 @@ export function InvoiceEntry() {
       for (const item of items) {
         const { error: stockError } = await supabase
           .from('products')
-          .update({
-            stock_quantity: supabase.sql`stock_quantity + ${item.quantity}`
+          .update({ 
+            stock_quantity: supabase.rpc('increment_stock', { 
+              row_id: item.product_id,
+              increment_by: item.quantity 
+            })
           })
           .eq('id', item.product_id);
 
