@@ -315,7 +315,7 @@ body {
 .copies-container {
   display: flex;
   flex-direction: column;
-  gap: 0.2cm; /* espaço entre as vias */
+  gap: 0.1cm; /* espaço entre as vias */
   height: 28.7cm; /* total da página menos margens */
   justify-content: space-between;
 }
