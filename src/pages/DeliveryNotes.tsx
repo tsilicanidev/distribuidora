@@ -192,7 +192,7 @@ export function DeliveryNotes() {
           .select(`
             id,
             number,
-            customer:customers!sales_orders_customer_id_fkey(razao_social, endereco, bairro, cidade, estado),
+            customer:customers!sales_orders_customer_id_fkey(razao_social, cpf_cnpj, endereco, bairro, cidade, estado),
             seller:profiles(full_name),
             total_amount,
             payment_method,
