@@ -406,7 +406,7 @@ th, td {
                 <div class="copy-label">1ª VIA - EMPRESA</div>
                 <div class="delivery-note">
                   <div class="header">
-                    <div class="company-info">
+  <div class="company-info">
                       J&P DISTRIBUIDORA DE ALIMENTOS
                       <br>CNPJ: 58.957.775/0001-30
                     </div>
