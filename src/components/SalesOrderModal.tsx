@@ -39,6 +39,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   const [error, setError] = useState<string | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_id: '',
@@ -108,9 +109,6 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
     }
   }, [formData.payment_method]);
 
-
-  
-
   useEffect(() => {
     if (customerSearchTerm.trim()) {
       // Filter customers based on search term
@@ -119,8 +117,10 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
         customer.cpf_cnpj.replace(/[^\d]/g, '').includes(customerSearchTerm.replace(/[^\d]/g, ''))
       );
       setFilteredCustomers(filtered);
+      setShowCustomerDropdown(true);
     } else {
       setFilteredCustomers([]);
+      setShowCustomerDropdown(false);
     }
   }, [customerSearchTerm, customers]);
 
@@ -439,7 +439,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
       customer_id: customerId
     });
     setCustomerSearchTerm('');
-    setFilteredCustomers([]);
+    setShowCustomerDropdown(false);
   };
 
   const formatCpfCnpj = (value: string) => {
@@ -519,11 +519,19 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
                 <input
                   type="text"
                   value={customerSearchTerm}
-                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setCustomerSearchTerm(e.target.value);
+                    setShowCustomerDropdown(true);
+                  }}
+                  onFocus={() => {
+                    if (customerSearchTerm.trim()) {
+                      setShowCustomerDropdown(true);
+                    }
+                  }}
                   placeholder="Buscar por CNPJ ou nome do cliente"
                   className="w-full rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-[#FF8A00]"
                 />
-                {filteredCustomers.length > 0 && (
+                {showCustomerDropdown && filteredCustomers.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {filteredCustomers.map(customer => (
                       <div 
