@@ -384,9 +384,9 @@ th, td {
           <div class="page">
             <div class="copies-container">
               <!-- First Copy -->
-              <div>
-                <div class="copy-label">1ª VIA - EMPRESA</div>
-                <div class="delivery-note">
+<div class="copy">
+    <div class="copy-label">1ª VIA - EMPRESA</div>
+    <div class="delivery-note">
                   <div class="header">
                     <div class="company-info">
                       J&P DISTRIBUIDORA DE ALIMENTOS
@@ -524,9 +524,9 @@ th, td {
               </div>
 
               <!-- Second Copy -->
-              <div>
-                <div class="copy-label">2ª VIA - CLIENTE</div>
-                <div class="delivery-note">
+              <div class="copy">
+    <div class="copy-label">2ª VIA - CLIENTE</div>
+    <div class="delivery-note">
                   <div class="header">
                     <div class="company-info">
                       J&P DISTRIBUIDORA DE ALIMENTOS
