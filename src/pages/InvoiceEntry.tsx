@@ -193,11 +193,20 @@ export function InvoiceEntry() {
 
       // Update product stock and create stock movements
       for (const item of items) {
-        // Update product stock directly
+        // Get current product stock
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', item.product_id)
+          .single();
+
+        if (!product) throw new Error('Produto não encontrado');
+
+        // Update product stock
         const { error: stockError } = await supabase
           .from('products')
           .update({ 
-            stock_quantity: supabase.sql`stock_quantity + ${item.quantity}`
+            stock_quantity: product.stock_quantity + item.quantity 
           })
           .eq('id', item.product_id);
 
