@@ -203,11 +203,11 @@ export function DeliveryNotes() {
 
         if (orderError) throw orderError;
         
-        // Get order items
+        // Get order items - Fixed the foreign key relationship
         const { data: orderItems, error: orderItemsError } = await supabase
           .from('sales_order_items')
           .select(`
-            product:products(name, unit),
+            product:products!sales_order_items_product_id_fkey(name, unit),
             quantity,
             unit_price,
             total_price,
