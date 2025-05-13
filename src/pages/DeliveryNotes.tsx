@@ -466,6 +466,10 @@ th, td {
                     <div class="info-section">
                       <div class="order-header">
                         <strong>Pedido ${item.order.number}</strong> - ${item.order.customer.razao_social}
+</div>
+<div class="info-item">
+  <span class="info-label">CNPJ:</span>
+  <span>${item.order.customer.cpf_cnpj || 'Não informado'}</span>
                       </div>
                       
                       <div class="info-grid">
@@ -606,6 +610,10 @@ th, td {
                     <div class="info-section">
                       <div class="order-header">
                         <strong>Pedido ${item.order.number}</strong> - ${item.order.customer.razao_social}
+</div>
+<div class="info-item">
+  <span class="info-label">CNPJ:</span>
+  <span>${item.order.customer.cpf_cnpj || 'Não informado'}</span>
                       </div>
                       
                       <div class="info-grid">
