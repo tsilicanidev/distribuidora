@@ -142,18 +142,45 @@ export function InvoiceEntry() {
 
       if (!supplier) throw new Error('Fornecedor não encontrado');
 
+      // First, create or find a corresponding customer record for the supplier
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('cpf_cnpj', supplier.cnpj)
+        .single();
+
+      let customerId;
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        // Create a new customer record for the supplier
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert([{
+            razao_social: supplier.razao_social,
+            cpf_cnpj: supplier.cnpj,
+            email: 'supplier@example.com', // Required field, using placeholder
+          }])
+          .select()
+          .single();
+
+        if (customerError) throw new Error('Erro ao criar registro de cliente para o fornecedor');
+        customerId = newCustomer.id;
+      }
+
       // Calculate totals
       const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
       const taxAmount = totalAmount * 0.18; // 18% tax rate
 
-      // Create fiscal invoice
+      // Create fiscal invoice using the customer ID
       const { data: invoice, error: invoiceError } = await supabase
         .from('fiscal_invoices')
         .insert([{
           number: formData.number,
           series: '1',
           issue_date: formData.issue_date,
-          customer_id: formData.supplier_id, // Using supplier as customer for now
+          customer_id: customerId, // Using the correct customer ID
           total_amount: totalAmount,
           tax_amount: taxAmount,
           status: 'draft',
