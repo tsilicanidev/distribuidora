@@ -51,7 +51,7 @@ export function InvoiceEntry() {
   async function getNextInvoiceNumber() {
     try {
       const { data, error } = await supabase
-        .rpc('get_next_fiscal_invoice_number');
+  .rpc('get_next_invoice_number');
       
       if (error) throw error;
       
