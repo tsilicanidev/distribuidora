@@ -25,6 +25,7 @@ interface Vehicle {
 interface Order {
   id: string;
   number: string;
+  displayNumber?: string; // Add displayNumber property
   customer: {
     razao_social: string;
     endereco: string;
@@ -263,7 +264,28 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
       const { data: ordersData, error: ordersError } = await query;
 
       if (ordersError) throw ordersError;
-      setOrders(ordersData || []);
+      
+      // Get all orders to get their display numbers
+      const { data: allOrders, error: allOrdersError } = await supabase
+        .from('sales_orders')
+        .select('id, number')
+        .order('created_at', { ascending: false });
+        
+      if (allOrdersError) throw allOrdersError;
+      
+      // Create a map of order IDs to their display numbers (sequential numbers)
+      const orderDisplayMap = new Map();
+      allOrders?.forEach((order, index) => {
+        orderDisplayMap.set(order.id, (allOrders.length - index).toString());
+      });
+      
+      // Add display numbers to the orders
+      const ordersWithDisplayNumbers = ordersData?.map(order => ({
+        ...order,
+        displayNumber: orderDisplayMap.get(order.id) || order.number
+      })) || [];
+      
+      setOrders(ordersWithDisplayNumbers);
       setError(null);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
@@ -621,7 +643,7 @@ function extractStreetNumber(address: string): string {
                       <option value="">Selecione um pedido</option>
                       {orders.map((order) => (
                         <option key={order.id} value={order.id}>
-                          {order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
+                          {order.displayNumber || order.number} - {order.customer.razao_social} (R$ {order.total_amount.toFixed(2)})
                         </option>
                       ))}
                     </select>
