@@ -299,9 +299,9 @@ export function DeliveryNotes() {
           <title>Romaneio ${note.number}</title>
           <style>
             @page {
-              size: A4;
-              margin: 0.4cm;
-            }
+  size: A4 portrait;
+  margin: 0.3cm;
+}
             body {
               font-family: Arial, sans-serif;
               margin: 0;
@@ -317,12 +317,9 @@ export function DeliveryNotes() {
               flex-direction: column;
             }
             .delivery-note {
-              border: 1px solid #ccc;
-             padding: 3px;
-  margin-bottom: 3px;
-              box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-              border-radius: 3px;
-            }
+  page-break-inside: avoid;
+  min-height: 13.5cm;
+}
             .header {
               text-align: center;
               margin-bottom: 5px;
@@ -436,10 +433,12 @@ export function DeliveryNotes() {
               border: 1px dashed #ddd;
             }
             .copies-container {
-              display: flex;
-              flex-direction: column;
-              gap: 0.3cm;
-            }
+  display: flex;
+  flex-direction: column;
+  gap: 0.3cm;
+  justify-content: space-between;
+  height: 28.5cm; /* deixa margem inferior para impressoras */
+}
             @media print {
               body { margin: 0; }
               .no-print { display: none; }
