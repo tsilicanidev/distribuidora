@@ -109,20 +109,20 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
     }
   }, [formData.payment_method]);
 
-  useEffect(() => {
-    if (customerSearchTerm.trim()) {
-      // Filter customers based on search term
-      const filtered = customers.filter(customer => 
-        customer.razao_social.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-        customer.cpf_cnpj.replace(/[^\d]/g, '').includes(customerSearchTerm.replace(/[^\d]/g, ''))
-      );
-      setFilteredCustomers(filtered);
-      setShowCustomerDropdown(true);
-    } else {
-      setFilteredCustomers([]);
-      setShowCustomerDropdown(false);
-    }
-  }, [customerSearchTerm, customers]);
+ useEffect(() => {
+  const debouncedSearch = debounce(() => {
+    searchCustomers(customerSearchTerm);
+  }, 300); // espera 300ms sem digitar
+
+  if (customerSearchTerm.trim()) {
+    debouncedSearch();
+  } else {
+    setFilteredCustomers([]);
+    setShowCustomerDropdown(false);
+  }
+
+  return () => debouncedSearch.cancel();
+}, [customerSearchTerm]);
 
   async function fetchData() {
     try {
