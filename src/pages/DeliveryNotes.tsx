@@ -324,7 +324,7 @@ body {
 .copies-container {
   display: flex;
   flex-direction: column;
-  gap: 0.6cm;
+  gap: 0.2cm;
   justify-content: space-between;
   height: 28cm; /* Deixa espaço para impressoras */
 }
