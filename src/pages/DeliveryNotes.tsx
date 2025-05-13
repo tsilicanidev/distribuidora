@@ -306,84 +306,79 @@ export function DeliveryNotes() {
 body {
   font-family: Arial, sans-serif;
   font-size: 8pt;
-  line-height: 1.25;
-  color: #333;
+  line-height: 1.2;
   margin: 0;
   padding: 0;
-}
-
-.delivery-note {
-  border: 1px solid #ccc;
-  padding: 5px;
-  margin-bottom: 8px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  border-radius: 4px;
-  page-break-inside: avoid;
+  color: #333;
 }
 
 .copies-container {
   display: flex;
   flex-direction: column;
-  gap: 0.2cm;
+  gap: 0.2cm; /* espaço entre as vias */
+  height: 28.7cm; /* total da página menos margens */
   justify-content: space-between;
-  height: 30cm; /* Deixa espaço para impressoras */
+}
+
+.delivery-note {
+  border: 1px solid #ccc;
+  padding: 4px;
+  margin: 0;
+  box-shadow: none;
+  border-radius: 4px;
+  page-break-inside: avoid;
+  flex: 1 1 50%;
 }
 
 .header h1 {
-  font-size: 14pt;
+  font-size: 13pt;
   margin: 0;
   color: #FF8A00;
 }
 
 .header h2 {
-  font-size: 11pt;
-  margin: 4px 0;
+  font-size: 10pt;
+  margin: 2px 0;
 }
 
 .info-section h3 {
-  font-size: 10pt;
+  font-size: 9pt;
   color: #FF8A00;
-  border-bottom: 1px solid #eee;
-  margin: 6px 0 4px 0;
+  margin: 4px 0;
 }
 
 .info-label {
   font-weight: bold;
   font-size: 8pt;
-  color: #666;
+  color: #555;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 6px;
   font-size: 7.5pt;
+  margin-top: 4px;
 }
 
 th, td {
   border: 1px solid #ddd;
-  padding: 4px;
+  padding: 3px;
   text-align: left;
 }
 
-th {
-  background-color: #f8f8f8;
-  font-weight: bold;
-}
-
 .footer {
-  margin-top: 6px;
   text-align: center;
+  margin-top: 6px;
 }
 
 .signature-line {
-  margin-top: 10px;
   border-top: 1px solid #333;
-  width: 150px;
-  display: inline-block;
+  width: 140px;
+  margin: 0 auto;
   padding-top: 4px;
-  font-size: 7.5pt;
+  font-size: 7pt;
 }
+
           </style>
         </head>
         <body>
