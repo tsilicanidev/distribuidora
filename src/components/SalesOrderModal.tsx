@@ -109,17 +109,17 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   }, [formData.payment_method]);
 
   useEffect(() => {
-    if (customerSearchTerm.trim()) {
-      // Filter customers based on search term
-      const filtered = customers.filter(customer => 
-        customer.razao_social.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-        customer.cpf_cnpj.replace(/[^\d]/g, '').includes(customerSearchTerm.replace(/[^\d]/g, ''))
-      );
-      setFilteredCustomers(filtered);
-    } else {
-      setFilteredCustomers([]);
-    }
-  }, [customerSearchTerm, customers]);
+  if (customerSearchTerm.trim()) {
+    const term = normalize(customerSearchTerm);
+    const filtered = customers.filter(customer => 
+      normalize(customer.razao_social).includes(term) ||
+      customer.cpf_cnpj.replace(/[^\d]/g, '').includes(customerSearchTerm.replace(/[^\d]/g, ''))
+    );
+    setFilteredCustomers(filtered);
+  } else {
+    setFilteredCustomers([]);
+  }
+}, [customerSearchTerm, customers]);
 
   async function fetchData() {
     try {
