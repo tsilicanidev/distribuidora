@@ -326,7 +326,7 @@ body {
   flex-direction: column;
   gap: 0.2cm;
   justify-content: space-between;
-  height: 28cm; /* Deixa espaço para impressoras */
+  height: 20cm; /* Deixa espaço para impressoras */
 }
 
 .header h1 {
