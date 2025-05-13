@@ -324,7 +324,16 @@ function SalesOrders() {
       const { data, error: orderError } = await query;
 
       if (orderError) throw orderError;
-      setOrders(data || []);
+      
+      // Format order numbers to be sequential
+      const formattedOrders = data?.map((order, index) => {
+        return {
+          ...order,
+          displayNumber: (data.length - index).toString() // Simple sequential numbering
+        };
+      }) || [];
+      
+      setOrders(formattedOrders);
       setError(null);
     } catch (error) {
       console.error('Erro ao buscar pedidos:', error);
@@ -532,11 +541,11 @@ function SalesOrders() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredOrders.map((order) => (
+            {filteredOrders.map((order, index) => (
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="px-3 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {order.number}
+                    {orders.length - index}
                   </div>
                   <div className="text-sm text-gray-500">
                     {new Date(order.created_at).toLocaleDateString()}
