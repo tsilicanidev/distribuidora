@@ -300,154 +300,90 @@ export function DeliveryNotes() {
           <style>
             @page {
   size: A4 portrait;
-  margin: 0.3cm;
+  margin: 0.5cm;
 }
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-              color: #333;
-               font-size: 6.5pt;
-  line-height: 1.05;
-            }
-            .page {
-              width: 100%;
-              height: 100%;
-              display: flex;
-              flex-direction: column;
-            }
-            .delivery-note {
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 8pt;
+  line-height: 1.25;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+.delivery-note {
+  border: 1px solid #ccc;
+  padding: 5px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  border-radius: 4px;
   page-break-inside: avoid;
-  min-height: 13.5cm;
 }
-            .header {
-              text-align: center;
-              margin-bottom: 5px;
-              border-bottom: 1px solid #FF8A00;
-              padding-bottom: 3px;
-              color: #333;
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 12pt;
-              color: #FF8A00;
-            }
-            .header h2 {
-              margin: 2px 0;
-              font-size: 10pt;
-            }
-            .info-section {
-              margin-bottom: 5px;
-            }
-            .info-section h3 {
-              margin: 2px 0;
-              font-size: 9pt;
-              color: #FF8A00;
-              border-bottom: 1px solid #eee;
-              padding-bottom: 3px;
-            }
-            .info-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 2px;
-              margin-bottom: 2px;
-            }
-            .info-item {
-              padding: 1px;
-            }
-            .info-label {
-              font-weight: bold;
-              font-size: 7pt;
-              color: #666;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 3px;
-              font-size: 6pt;
-            }
-            th, td {
-              border: 1px solid #ddd;
-              padding: 1px;
-              text-align: left;
-            }
-            th {
-              background-color: #f8f8f8;
-              font-weight: bold;
-              color: #555;
-            }
-            tr:nth-child(even) {
-              background-color: #f9f9f9;
-            }
-            tr:hover {
-              background-color: #f5f5f5;
-            }
-            .footer {
-              margin-top: 5px;
-              text-align: center;
-            }
-            .signature-line {
-              margin-top: 10px;
-              border-top: 1px solid #333;
-              width: 120px;
-              display: inline-block;
-              text-align: center;
-              padding-top: 2px;
-              font-size: 7pt;
-            }
-            .delivery-notes {
-              font-style: italic;
-              color: #666;
-              margin-top: 1px;
-              font-size: 6pt;
-            }
-            .copy-label {
-              text-align: right;
-              font-style: italic;
-              font-size: 6pt;
-              margin-bottom: 2px;
-              color: #666;
-            }
-            .company-info {
-              text-align: center;
-              margin-bottom: 3px;
-              font-size: 6pt;
-              color: #666;
-            }
-            .order-header {
-              background-color: #f0f0f0;
-              padding: 2px;
-              border-radius: 2px;
-              margin-bottom: 2px;
-              border-left: 2px solid #FF8A00;
-            }
-            .total-row {
-              font-weight: bold;
-              background-color: #f0f0f0;
-            }
-            .payment-info {
-              background-color: #f9f9f9;
-              padding: 2px;
-              border-radius: 2px;
-              margin-top: 2px;
-              border: 1px dashed #ddd;
-            }
-            .copies-container {
+
+.copies-container {
   display: flex;
   flex-direction: column;
-  gap: 0.3cm;
+  gap: 0.6cm;
   justify-content: space-between;
-  height: 28.5cm; /* deixa margem inferior para impressoras */
+  height: 28cm; /* Deixa espaço para impressoras */
 }
-            @media print {
-              body { margin: 0; }
-              .no-print { display: none; }
-              .delivery-note {
-                border: 1px solid #ccc;
-                page-break-inside: avoid;
-                box-shadow: none;
-              }
-            }
+
+.header h1 {
+  font-size: 14pt;
+  margin: 0;
+  color: #FF8A00;
+}
+
+.header h2 {
+  font-size: 11pt;
+  margin: 4px 0;
+}
+
+.info-section h3 {
+  font-size: 10pt;
+  color: #FF8A00;
+  border-bottom: 1px solid #eee;
+  margin: 6px 0 4px 0;
+}
+
+.info-label {
+  font-weight: bold;
+  font-size: 8pt;
+  color: #666;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 6px;
+  font-size: 7.5pt;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 4px;
+  text-align: left;
+}
+
+th {
+  background-color: #f8f8f8;
+  font-weight: bold;
+}
+
+.footer {
+  margin-top: 6px;
+  text-align: center;
+}
+
+.signature-line {
+  margin-top: 10px;
+  border-top: 1px solid #333;
+  width: 150px;
+  display: inline-block;
+  padding-top: 4px;
+  font-size: 7.5pt;
+}
           </style>
         </head>
         <body>
