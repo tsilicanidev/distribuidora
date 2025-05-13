@@ -379,6 +379,17 @@ th, td {
   font-size: 7pt;
 }
 
+.header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.company-info {
+  font-weight: bold;
+  font-size: 9pt;
+  line-height: 1.3;
+}
+
 @media print {
   .no-print {
     display: none;
