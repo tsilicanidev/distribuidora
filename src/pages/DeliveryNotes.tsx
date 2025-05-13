@@ -379,6 +379,12 @@ th, td {
   font-size: 7pt;
 }
 
+@media print {
+  .no-print {
+    display: none;
+  }
+
+
           </style>
         </head>
         <body>
