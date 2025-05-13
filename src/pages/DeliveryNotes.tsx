@@ -300,7 +300,7 @@ export function DeliveryNotes() {
           <style>
             @page {
               size: A4;
-              margin: 1cm;
+              margin: 0.4cm;
             }
             body {
               font-family: Arial, sans-serif;
@@ -407,8 +407,8 @@ export function DeliveryNotes() {
             .copy-label {
               text-align: right;
               font-style: italic;
-              font-size: 5pt;
-              margin-bottom: 1px;
+              font-size: 6pt;
+              margin-bottom: 2px;
               color: #666;
             }
             .company-info {
@@ -438,7 +438,7 @@ export function DeliveryNotes() {
             .copies-container {
               display: flex;
               flex-direction: column;
-              gap: 0.2cm;
+              gap: 0.3cm;
             }
             @media print {
               body { margin: 0; }
