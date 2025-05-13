@@ -191,15 +191,13 @@ export function InvoiceEntry() {
 
       if (invoiceError) throw invoiceError;
 
-      // Update product stock
+      // Update product stock and create stock movements
       for (const item of items) {
+        // Update product stock directly
         const { error: stockError } = await supabase
           .from('products')
           .update({ 
-            stock_quantity: supabase.rpc('increment_stock', { 
-              row_id: item.product_id,
-              increment_by: item.quantity 
-            })
+            stock_quantity: supabase.sql`stock_quantity + ${item.quantity}`
           })
           .eq('id', item.product_id);
 
