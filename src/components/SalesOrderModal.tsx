@@ -62,32 +62,25 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   const [showDueDateOptions, setShowDueDateOptions] = useState(false);
   const [selectedDueDateOption, setSelectedDueDateOption] = useState<string | null>(null);
 
-  async function searchCustomers(term: string) {
-    const sanitized = term.replace(/[^\w\s]/gi, '').trim();
+ async function searchCustomers(term: string) {
+  try {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id, razao_social, cpf_cnpj')
+      .or(`razao_social.ilike.%${term}%,cpf_cnpj.ilike.%${term}%`)
+      .order('razao_social');
 
-    if (!sanitized) {
-      setFilteredCustomers([]);
-      setShowCustomerDropdown(false);
-      return;
-    }
+    if (error) throw error;
 
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('id, razao_social, cpf_cnpj')
-        .or(`razao_social.ilike.%${sanitized}%,cpf_cnpj.ilike.%${sanitized}%`)
-        .order('razao_social');
-
-      if (error) throw error;
-
-      setFilteredCustomers(data || []);
-      setShowCustomerDropdown(true);
-    } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
-      setFilteredCustomers([]);
-      setShowCustomerDropdown(false);
-    }
+    setFilteredCustomers(data || []);
+    setShowCustomerDropdown(true);
+  } catch (error) {
+    console.error('Erro ao buscar clientes:', error);
+    setFilteredCustomers([]);
+    setShowCustomerDropdown(false);
   }
+}
+
 
 
   useEffect(() => {
