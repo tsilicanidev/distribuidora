@@ -300,7 +300,7 @@ export function DeliveryNotes() {
           <style>
             @page {
   size: A4 portrait;
-  margin: 0.5cm;
+  margin: 0.3cm;
 }
 
 body {
