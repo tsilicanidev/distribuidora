@@ -154,24 +154,29 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   return () => debouncedSearch.cancel();
 }, [customerSearchTerm]);
 
-  async function searchCustomers(term: string) {
-  try {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('id, razao_social, cpf_cnpj')
-      .or(`razao_social.ilike.%${term}%,cpf_cnpj.ilike.%${term}%`)
-      .order('razao_social');
+  async function fetchData() {
+    try {
+      const [
+        { data: customersData, error: customersError },
+        { data: productsData, error: productsError }
+      ] = await Promise.all([
+        supabase.from('customers').select('id, razao_social, cpf_cnpj').order('razao_social'),
+        supabase.from('products').select('*').order('name')
+      ]);
 
-    if (error) throw error;
+      if (customersError) throw customersError;
+      if (productsError) throw productsError;
 
-    setFilteredCustomers(data || []);
-    setShowCustomerDropdown(true);
-  } catch (error) {
-    console.error('Erro ao buscar clientes:', error);
-    setFilteredCustomers([]);
-    setShowCustomerDropdown(false);
+      setCustomers(customersData || []);
+      setProducts(productsData || []);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Erro ao carregar dados');
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   async function fetchOrderItems(orderId: string) {
     try {
