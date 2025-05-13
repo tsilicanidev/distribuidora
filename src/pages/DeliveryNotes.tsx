@@ -438,7 +438,7 @@ export function DeliveryNotes() {
             .copies-container {
               display: flex;
               flex-direction: column;
-              gap: 0.3cm;
+              gap: 0.2cm;
             }
             @media print {
               body { margin: 0; }
