@@ -109,11 +109,11 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
   }, [formData.payment_method]);
 
   useEffect(() => {
-    if (customerSearchTerm) {
+    if (customerSearchTerm.trim()) {
       // Filter customers based on search term
       const filtered = customers.filter(customer => 
-        customer.cpf_cnpj.replace(/[^\d]/g, '').includes(customerSearchTerm.replace(/[^\d]/g, '')) ||
-        customer.razao_social.toLowerCase().includes(customerSearchTerm.toLowerCase())
+        customer.razao_social.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+        customer.cpf_cnpj.replace(/[^\d]/g, '').includes(customerSearchTerm.replace(/[^\d]/g, ''))
       );
       setFilteredCustomers(filtered);
     } else {
@@ -268,6 +268,17 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
 
       if (!items.length || items.some(item => !item.product_id)) {
         throw new Error('Adicione pelo menos um produto');
+      }
+
+      // Check stock availability
+      for (const item of items) {
+        const product = products.find(p => p.id === item.product_id);
+        if (!product) {
+          throw new Error('Produto não encontrado');
+        }
+        if (item.quantity > product.stock_quantity) {
+          throw new Error(`Quantidade insuficiente em estoque para o produto ${product.name}`);
+        }
       }
 
       // Get current user
