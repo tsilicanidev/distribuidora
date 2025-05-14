@@ -186,14 +186,14 @@ export function Reports() {
           ],
         };
       } else if (filters.type === 'all' || filters.type === 'products') {
-        // Fetch products with their sales and purchase data
+        // Fetch products with their sales and purchase data using explicit foreign key relationships
         const { data: products, error: productsError } = await supabase
           .from('products')
           .select(`
             id,
             name,
             unit,
-            sales_order_items (
+            sales_order_items:sales_order_items_product_id_fkey (
               quantity,
               unit_price,
               total_price,
@@ -201,7 +201,7 @@ export function Reports() {
                 status
               )
             ),
-            customer_order_items (
+            customer_order_items:customer_order_items_product_id_fkey (
               quantity,
               unit_price,
               total_price,
