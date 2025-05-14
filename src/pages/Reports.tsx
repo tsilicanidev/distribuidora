@@ -66,14 +66,14 @@ export function Reports() {
       let data: ReportData | null = null;
 
       if (filters.type === 'all' || filters.type === 'purchases') {
-        // Fetch fiscal invoices with supplier data
+        // Fetch fiscal invoices with customer data
         const { data: invoices, error: invoicesError } = await supabase
           .from('fiscal_invoices')
           .select(`
             *,
-            supplier:suppliers(
+            customer:customers(
               razao_social,
-              cnpj
+              cpf_cnpj
             )
           `)
           .gte('issue_date', filters.startDate)
@@ -87,30 +87,30 @@ export function Reports() {
           return;
         }
 
-        // Group invoices by supplier
-        const supplierStats = invoices.reduce((acc: any, invoice) => {
-          const supplierName = invoice.supplier?.razao_social || 'Desconhecido';
+        // Group invoices by customer
+        const customerStats = invoices.reduce((acc: any, invoice) => {
+          const customerName = invoice.customer?.razao_social || 'Desconhecido';
           
-          if (!acc[supplierName]) {
-            acc[supplierName] = {
-              supplier: supplierName,
-              cnpj: invoice.supplier?.cnpj || '',
+          if (!acc[customerName]) {
+            acc[customerName] = {
+              customer: customerName,
+              cpf_cnpj: invoice.customer?.cpf_cnpj || '',
               invoiceCount: 0,
               totalAmount: 0,
               totalTax: 0,
             };
           }
           
-          acc[supplierName].invoiceCount += 1;
-          acc[supplierName].totalAmount += invoice.total_amount || 0;
-          acc[supplierName].totalTax += invoice.tax_amount || 0;
+          acc[customerName].invoiceCount += 1;
+          acc[customerName].totalAmount += invoice.total_amount || 0;
+          acc[customerName].totalTax += invoice.tax_amount || 0;
           
           return acc;
         }, {});
 
         // Convert to array and sort by total amount
-        const supplierData = Object.values(supplierStats);
-        supplierData.sort((a: any, b: any) => b.totalAmount - a.totalAmount);
+        const customerData = Object.values(customerStats);
+        customerData.sort((a: any, b: any) => b.totalAmount - a.totalAmount);
 
         // Group by month for the chart
         const monthlyData = invoices.reduce((acc: any, invoice) => {
@@ -134,7 +134,7 @@ export function Reports() {
         const totalTaxes = months.map(month => monthlyData[month].totalTax);
 
         data = {
-          title: 'Relatório de Compras por Fornecedor',
+          title: 'Relatório de Compras por Cliente',
           chartData: {
             labels: months,
             datasets: [
@@ -154,15 +154,15 @@ export function Reports() {
               },
             ],
           },
-          tableData: supplierData,
+          tableData: customerData,
           tableColumns: [
             { 
-              header: 'Fornecedor', 
-              accessor: 'supplier' 
+              header: 'Cliente', 
+              accessor: 'customer' 
             },
             { 
-              header: 'CNPJ', 
-              accessor: 'cnpj' 
+              header: 'CPF/CNPJ', 
+              accessor: 'cpf_cnpj' 
             },
             { 
               header: 'Qtd. Notas', 
