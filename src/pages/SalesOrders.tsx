@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, Save, AlertTriangle, CheckCircle2, XCircle, Ban, Edit } from 'lucide-react';
+import { Plus, Minus, Save, AlertTriangle, CheckCircle2, XCircle, Ban, Edit, Search, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
