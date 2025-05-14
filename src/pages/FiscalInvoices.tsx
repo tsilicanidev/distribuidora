@@ -90,7 +90,7 @@ function InvoiceDetailsModal({ isOpen, onClose, invoice }: InvoiceDetailsModalPr
             bairro: invoice.customer.bairro || 'Não informado',
             cidade: invoice.customer.cidade || 'Não informado',
             uf: invoice.customer.estado || 'SP',
-            cep: invoice.customer.cep || '00000000'
+            cep: '00000000'
           },
           [
             {

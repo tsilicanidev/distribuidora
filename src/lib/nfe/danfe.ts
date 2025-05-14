@@ -31,6 +31,31 @@ export function formatarChaveNFe(chave: string): string {
   return chave.replace(/(\d{4})(?=\d)/g, '$1 ');
 }
 
+// Função para gerar o código de barras da chave
+export async function gerarCodigoBarras(chave: string): Promise<string> {
+  try {
+    // Cria um elemento canvas temporário
+    const canvas = document.createElement('canvas');
+    
+    // Gera o código de barras
+    JsBarcode(canvas, chave, {
+      format: 'CODE128',
+      displayValue: false,
+      width: 1.5,
+      height: 50,
+      margin: 0
+    });
+    
+    // Converte o canvas para uma imagem base64
+    const dataUrl = canvas.toDataURL('image/png');
+    return dataUrl;
+  } catch (error) {
+    console.error('Erro ao gerar código de barras:', error);
+    // Retorna uma string vazia em caso de erro
+    return '';
+  }
+}
+
 // Função para gerar o QR Code da NFe
 export async function gerarQRCode(chave: string): Promise<string> {
   try {
@@ -97,6 +122,9 @@ export async function gerarDANFE(
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 10;
   
+  // Gerar código de barras
+  const codigoBarras = await gerarCodigoBarras(chave);
+  
   // Cabeçalho
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
@@ -104,61 +132,68 @@ export async function gerarDANFE(
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('NOTA FISCAL ELETRÔNICA', pageWidth / 2, margin + 5, { align: 'center' });
+  
+  // Código de barras
+  if (codigoBarras) {
+    doc.addImage(codigoBarras, 'PNG', margin, margin + 10, pageWidth - 2 * margin, 15);
+  }
+  
+  // Informações da NF-e
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('0 - ENTRADA', 40, margin + 10);
-  doc.text('1 - SAÍDA', 60, margin + 10);
+  doc.text('0 - ENTRADA', 40, margin + 30);
+  doc.text('1 - SAÍDA', 60, margin + 30);
   doc.setFillColor(0, 0, 0);
-  doc.rect(53, margin + 8, 3, 3, 'F'); // Marca "Saída"
+  doc.rect(53, margin + 28, 3, 3, 'F'); // Marca "Saída"
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Nº ' + numero, pageWidth / 2, margin + 15, { align: 'center' });
-  doc.text('SÉRIE ' + serie, pageWidth / 2, margin + 20, { align: 'center' });
+  doc.text('Nº ' + numero, pageWidth / 2, margin + 35, { align: 'center' });
+  doc.text('SÉRIE ' + serie, pageWidth / 2, margin + 40, { align: 'center' });
   
   // Chave de acesso
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('CHAVE DE ACESSO', margin, margin + 25);
+  doc.text('CHAVE DE ACESSO', margin, margin + 45);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatarChaveNFe(chave), pageWidth / 2, margin + 30, { align: 'center' });
+  doc.text(formatarChaveNFe(chave), pageWidth / 2, margin + 50, { align: 'center' });
   
   // Protocolo de autorização
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('Protocolo de Autorização: ' + Math.floor(Math.random() * 1000000000).toString().padStart(15, '0'), margin, margin + 35);
-  doc.text('Data de Autorização: ' + dataEmissao.toLocaleString(), margin + 80, margin + 35);
+  doc.text('Protocolo de Autorização: ' + Math.floor(Math.random() * 1000000000).toString().padStart(15, '0'), margin, margin + 55);
+  doc.text('Data de Autorização: ' + dataEmissao.toLocaleString(), margin + 80, margin + 55);
   
   // Dados do emitente
   doc.setFillColor(240, 240, 240);
-  doc.rect(margin, margin + 40, pageWidth - 2 * margin, 25, 'F');
+  doc.rect(margin, margin + 60, pageWidth - 2 * margin, 25, 'F');
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('EMITENTE', margin + 2, margin + 45);
+  doc.text('EMITENTE', margin + 2, margin + 65);
   doc.setFontSize(9);
-  doc.text(emitente.nome, margin + 2, margin + 50);
+  doc.text(emitente.nome, margin + 2, margin + 70);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('CNPJ: ' + formatarCNPJ(emitente.cnpj), margin + 2, margin + 55);
-  doc.text(`Endereço: ${emitente.endereco}, ${emitente.bairro}, ${emitente.cidade} - ${emitente.uf}, ${emitente.cep}`, margin + 2, margin + 60);
+  doc.text('CNPJ: ' + formatarCNPJ(emitente.cnpj), margin + 2, margin + 75);
+  doc.text(`Endereço: ${emitente.endereco}, ${emitente.bairro}, ${emitente.cidade} - ${emitente.uf}, ${emitente.cep}`, margin + 2, margin + 80);
   
   // Dados do destinatário
   doc.setFillColor(240, 240, 240);
-  doc.rect(margin, margin + 70, pageWidth - 2 * margin, 25, 'F');
+  doc.rect(margin, margin + 90, pageWidth - 2 * margin, 25, 'F');
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('DESTINATÁRIO', margin + 2, margin + 75);
+  doc.text('DESTINATÁRIO', margin + 2, margin + 95);
   doc.setFontSize(9);
-  doc.text(destinatario.nome, margin + 2, margin + 80);
+  doc.text(destinatario.nome, margin + 2, margin + 100);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('CPF/CNPJ: ' + formatarCpfCnpj(destinatario.cpfCnpj), margin + 2, margin + 85);
-  doc.text(`Endereço: ${destinatario.endereco}, ${destinatario.bairro}, ${destinatario.cidade} - ${destinatario.uf}, ${destinatario.cep}`, margin + 2, margin + 90);
+  doc.text('CPF/CNPJ: ' + formatarCpfCnpj(destinatario.cpfCnpj), margin + 2, margin + 105);
+  doc.text(`Endereço: ${destinatario.endereco}, ${destinatario.bairro}, ${destinatario.cidade} - ${destinatario.uf}, ${destinatario.cep}`, margin + 2, margin + 110);
   
   // Tabela de produtos
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('DADOS DOS PRODUTOS', margin, margin + 100);
+  doc.text('DADOS DOS PRODUTOS', margin, margin + 120);
   
   // Cabeçalho da tabela
   const headers = [
@@ -184,7 +219,7 @@ export async function gerarDANFE(
   (doc as any).autoTable({
     head: [headers.map(h => h.header)],
     body: tableData.map(row => headers.map(h => row[h.dataKey as keyof typeof row])),
-    startY: margin + 105,
+    startY: margin + 125,
     margin: { left: margin, right: margin },
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
