@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 
 // Função para formatar CNPJ
 export function formatarCNPJ(cnpj: string): string {

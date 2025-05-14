@@ -1,10 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, UserSquare2, X, FileText, AlertTriangle, CheckCircle, XCircle, Ban, Edit } from 'lucide-react';
+import { Plus, Minus, Save, AlertTriangle, CheckCircle2, XCircle, Ban, Edit } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { SalesOrderModal } from '../components/SalesOrderModal';
 import { useRole } from '../hooks/useRole';
 import { processarEmissaoNFe } from '../lib/nfe/emitirNfe';
 
+
+interface Order {
+  id: string;
+  number: string;
+  customer: {
+    razao_social: string;
+  };
+  total_amount: number;
+  created_at: string;
+}
 
 interface OrderItem {
   id: string;
@@ -605,7 +615,7 @@ function SalesOrders() {
                         className="text-green-600 hover:text-green-900 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Aprovar Pedido"
                       >
-                        <CheckCircle className="h-5 w-5" />
+                        <CheckCircle2 className="h-5 w-5" />
                       </button>
                     )}
 

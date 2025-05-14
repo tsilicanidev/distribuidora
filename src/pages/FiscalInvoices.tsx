@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Search, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { gerarDANFE } from '../lib/nfe/danfe';
 
 interface FiscalInvoice {
   id: string;
@@ -61,6 +62,70 @@ const getStatusText = (status: string) => {
 
 function InvoiceDetailsModal({ isOpen, onClose, invoice }: InvoiceDetailsModalProps) {
   if (!isOpen || !invoice) return null;
+
+  const handleViewDANFE = async () => {
+    try {
+      if (!invoice.pdf_url) {
+        // Se não tiver URL, gerar o DANFE localmente
+        const chave = invoice.pdf_url?.split('/').pop() || generateRandomKey();
+        
+        const danfe = await gerarDANFE(
+          chave,
+          invoice.number,
+          invoice.series,
+          new Date(invoice.issue_date),
+          {
+            nome: '58957775 PATRICIA APARECIDA RAMOS DOS SANTOS',
+            cnpj: '58957775000130',
+            endereco: 'Rua Vanda',
+            bairro: 'Parque dos Camargos',
+            cidade: 'Barueri',
+            uf: 'SP',
+            cep: '06436380'
+          },
+          {
+            nome: invoice.customer.razao_social,
+            cpfCnpj: invoice.customer.cpf_cnpj,
+            endereco: invoice.customer.endereco || 'Não informado',
+            bairro: invoice.customer.bairro || 'Não informado',
+            cidade: invoice.customer.cidade || 'Não informado',
+            uf: invoice.customer.estado || 'SP',
+            cep: invoice.customer.cep || '00000000'
+          },
+          [
+            {
+              codigo: '001',
+              descricao: 'MERCADORIAS DIVERSAS',
+              quantidade: 1,
+              unidade: 'UN',
+              valorUnitario: invoice.total_amount,
+              valorTotal: invoice.total_amount
+            }
+          ],
+          invoice.total_amount
+        );
+        
+        // Criar URL para o blob e abrir em nova janela
+        const url = URL.createObjectURL(danfe);
+        window.open(url, '_blank');
+      } else {
+        // Se tiver URL, abrir diretamente
+        window.open(invoice.pdf_url, '_blank');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar DANFE:', error);
+      alert('Erro ao gerar DANFE. Por favor, tente novamente.');
+    }
+  };
+  
+  // Função para gerar uma chave aleatória de 44 dígitos
+  function generateRandomKey(): string {
+    let key = '';
+    for (let i = 0; i < 44; i++) {
+      key += Math.floor(Math.random() * 10).toString();
+    }
+    return key;
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -178,15 +243,13 @@ function InvoiceDetailsModal({ isOpen, onClose, invoice }: InvoiceDetailsModalPr
                 Baixar XML
               </button>
             )}
-            {invoice.pdf_url && (
-              <button
-                onClick={() => window.open(invoice.pdf_url, '_blank')}
-                className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
-              >
-                <FileText className="h-5 w-5 mr-2" />
-                Visualizar DANFE
-              </button>
-            )}
+            <button
+              onClick={handleViewDANFE}
+              className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+            >
+              <FileText className="h-5 w-5 mr-2" />
+              Visualizar DANFE
+            </button>
           </div>
         </div>
       </div>
