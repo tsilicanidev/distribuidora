@@ -111,7 +111,7 @@ export function DriverModal({ isOpen, onClose, onSuccess, driver }: DriverModalP
                 .insert([{
                   driver_id: driver.id,
                   vehicle_id: vehicle.id,
-                  start_date: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+                  start_date: new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
                   status: 'active',
                 }]);
 
@@ -159,7 +159,7 @@ export function DriverModal({ isOpen, onClose, onSuccess, driver }: DriverModalP
               .insert([{
                 driver_id: newDriver.id,
                 vehicle_id: vehicle.id,
-                start_date: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+                start_date: new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
                 status: 'active',
               }]);
 
