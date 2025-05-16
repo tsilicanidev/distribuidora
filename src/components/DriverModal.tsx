@@ -111,7 +111,7 @@ export function DriverModal({ isOpen, onClose, onSuccess, driver }: DriverModalP
                 .insert([{
                   driver_id: driver.id,
                   vehicle_id: vehicle.id,
-                  start_date: new Date().toISOString().split('T')[0],
+                  start_date: new Date().toLocaleString('pt-BR'),
                   status: 'active',
                 }]);
 
@@ -159,7 +159,7 @@ export function DriverModal({ isOpen, onClose, onSuccess, driver }: DriverModalP
               .insert([{
                 driver_id: newDriver.id,
                 vehicle_id: vehicle.id,
-                start_date: new Date().toISOString().split('T')[0],
+                start_date: new Date().toLocaleString('pt-BR'),
                 status: 'active',
               }]);
 

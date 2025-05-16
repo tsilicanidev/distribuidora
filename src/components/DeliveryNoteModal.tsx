@@ -71,7 +71,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
 
   const [formData, setFormData] = useState({
     number: '',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleString('pt-BR'),
     vehicle_id: '',
     helper_name: '',
     notes: '',
@@ -123,7 +123,7 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
         // Reset form for new delivery note
         setFormData({
           number: '',
-          date: new Date().toISOString().split('T')[0],
+          date: new Date().toLocaleString('pt-BR'),
           vehicle_id: '',
           helper_name: '',
           notes: '',

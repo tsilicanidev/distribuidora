@@ -15,7 +15,7 @@ interface MaintenanceModalProps {
 
 export function MaintenanceModal({ isOpen, onClose, onSuccess, vehicle }: MaintenanceModalProps) {
   const [formData, setFormData] = useState({
-    maintenance_date: new Date().toISOString().split('T')[0],
+    maintenance_date: new Date().toLocaleString('pt-BR'),
     maintenance_type: '',
     description: '',
     cost: 0,
