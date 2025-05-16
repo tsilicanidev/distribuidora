@@ -69,13 +69,13 @@ export function DeliveryNoteModal({ isOpen, onClose, onSuccess, deliveryNote }: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
-    number: '',
-    date: new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
-    vehicle_id: '',
-    helper_name: '',
-    notes: '',
-  });
+const [formData, setFormData] = useState({
+  number: '',
+  date: new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }),
+  vehicle_id: '',
+  helper_name: '',
+  notes: '',
+});
 
   const [items, setItems] = useState<DeliveryNoteItem[]>([{
     order_id: '',
