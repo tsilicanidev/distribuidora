@@ -33,7 +33,7 @@ export function InvoiceEntry() {
   const [formData, setFormData] = useState({
     number: '',
     supplier_id: '',
-    issue_date: new Date().toLocaleString('pt-BR'),
+    issue_date: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([{
@@ -262,7 +262,7 @@ export function InvoiceEntry() {
       setFormData({
         number: '',
         supplier_id: '',
-        issue_date: new Date().toLocaleString('pt-BR'),
+        issue_date: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
       });
       setItems([{
         product_id: '',

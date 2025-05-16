@@ -51,7 +51,7 @@ export function Reports() {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<ReportFilter>({
     startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
-    enddate: new Date().toLocaleString('pt-BR'),
+    enddate: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
     type: 'all',
   });
   const [reportData, setReportData] = useState<ReportData | null>(null);
