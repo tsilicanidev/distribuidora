@@ -427,9 +427,10 @@ function extractStreetNumber(address: string): string {
 
       // Create or update delivery note
       const noteData = {
-        ...formData,
-        created_by: (await supabase.auth.getUser()).data.user?.id
-      };
+  ...formData,
+  emitted_at: new Date().toISOString(), // <-- adiciona hora exata
+  created_by: (await supabase.auth.getUser()).data.user?.id
+};
 
       let deliveryNoteId;
       if (deliveryNote?.id) {

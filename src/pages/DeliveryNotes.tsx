@@ -418,7 +418,7 @@ th, td {
                     <div class="info-grid">
                       <div class="info-item">
                         <span class="info-label">Data:</span>
-                        <span>${new Date(note.date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
+                        <span>${new Date(note.emitted_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
                       </div>
                       <div class="info-item">
                         <span class="info-label">Status:</span>
@@ -562,7 +562,7 @@ th, td {
                     <div class="info-grid">
                       <div class="info-item">
                         <span class="info-label">Data:</span>
-                        <span>${new Date(note.date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
+                        <span>${new Date(note.emitted_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
                       </div>
                       <div class="info-item">
                         <span class="info-label">Status:</span>
@@ -785,7 +785,7 @@ th, td {
                       {note.number}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {new Date(note.date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+                      {new Date(note.emitted_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
