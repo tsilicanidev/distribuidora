@@ -507,25 +507,44 @@ th, td {
                             <th>Produto</th>
                             <th style="width: 35px; text-align: center;">Qtd</th>
                             <th style="width: 35px; text-align: center;">Unid.</th>
+                            <th style="width: 35px; text-align: center;">Caixas</th>
                             <th style="width: 35px; text-align: center;">Peso</th>
                             <th style="width: 50px; text-align: right;">V.Unit</th>
                             <th style="width: 50px; text-align: right;">V.Total</th>
                           </tr>
                         </thead>
                         <tbody>
-                          ${item.items.map(orderItem => `
-                            <tr>
-                              <td>${orderItem.product.name}</td>
-                              <td style="text-align: center;">${orderItem.quantity}</td>
-                              <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
-                              <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) : '-'}</td>
-                              <td style="text-align: right;">${orderItem.unit_price.toFixed(2)}</td>
-                              <td style="text-align: right;">${orderItem.total_price.toFixed(2)}</td>
-                            </tr>
-                          `).join('')}
+                          ${item.items.map(orderItem => {
+                            // Calculate number of boxes based on unit type
+                            let boxCount = '';
+                            if (orderItem.product.unit === 'CX') {
+                              boxCount = orderItem.quantity.toString();
+                            } else if (orderItem.product.unit === 'UN') {
+                              // Assuming 12 units per box
+                              boxCount = Math.ceil(orderItem.quantity / 12).toString();
+                            } else if (orderItem.product.unit === 'FD') {
+                              // Assuming 1 bundle = 2 boxes
+                              boxCount = (orderItem.quantity * 2).toString();
+                            } else if (orderItem.product.unit === 'PCT') {
+                              // Assuming 2 packages = 1 box
+                              boxCount = Math.ceil(orderItem.quantity / 2).toString();
+                            }
+                            
+                            return `
+                              <tr>
+                                <td>${orderItem.product.name}</td>
+                                <td style="text-align: center;">${orderItem.quantity}</td>
+                                <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
+                                <td style="text-align: center;">${boxCount}</td>
+                                <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) + ' kg' : '-'}</td>
+                                <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
+                                <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
+                              </tr>
+                            `;
+                          }).join('')}
                           <tr class="total-row">
-                            <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
-                            <td style="text-align: right;"><strong>${item.order.total_amount.toFixed(2)}</strong></td>
+                            <td colspan="6" style="text-align: right;"><strong>Total:</strong></td>
+                            <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
                           </tr>
                         </tbody>
                       </table>
@@ -651,25 +670,44 @@ th, td {
                             <th>Produto</th>
                             <th style="width: 35px; text-align: center;">Qtd</th>
                             <th style="width: 35px; text-align: center;">Unid.</th>
+                            <th style="width: 35px; text-align: center;">Caixas</th>
                             <th style="width: 35px; text-align: center;">Peso</th>
                             <th style="width: 50px; text-align: right;">V.Unit</th>
                             <th style="width: 50px; text-align: right;">V.Total</th>
                           </tr>
                         </thead>
                         <tbody>
-                          ${item.items.map(orderItem => `
-                            <tr>
-                              <td>${orderItem.product.name}</td>
-                              <td style="text-align: center;">${orderItem.quantity}</td>
-                              <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
-                              <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) : '-'}</td>
-                              <td style="text-align: right;">${orderItem.unit_price.toFixed(2)}</td>
-                              <td style="text-align: right;">${orderItem.total_price.toFixed(2)}</td>
-                            </tr>
-                          `).join('')}
+                          ${item.items.map(orderItem => {
+                            // Calculate number of boxes based on unit type
+                            let boxCount = '';
+                            if (orderItem.product.unit === 'CX') {
+                              boxCount = orderItem.quantity.toString();
+                            } else if (orderItem.product.unit === 'UN') {
+                              // Assuming 12 units per box
+                              boxCount = Math.ceil(orderItem.quantity / 12).toString();
+                            } else if (orderItem.product.unit === 'FD') {
+                              // Assuming 1 bundle = 2 boxes
+                              boxCount = (orderItem.quantity * 2).toString();
+                            } else if (orderItem.product.unit === 'PCT') {
+                              // Assuming 2 packages = 1 box
+                              boxCount = Math.ceil(orderItem.quantity / 2).toString();
+                            }
+                            
+                            return `
+                              <tr>
+                                <td>${orderItem.product.name}</td>
+                                <td style="text-align: center;">${orderItem.quantity}</td>
+                                <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
+                                <td style="text-align: center;">${boxCount}</td>
+                                <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) + ' kg' : '-'}</td>
+                                <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
+                                <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
+                              </tr>
+                            `;
+                          }).join('')}
                           <tr class="total-row">
-                            <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
-                            <td style="text-align: right;"><strong>${item.order.total_amount.toFixed(2)}</strong></td>
+                            <td colspan="6" style="text-align: right;"><strong>Total:</strong></td>
+                            <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
                           </tr>
                         </tbody>
                       </table>
