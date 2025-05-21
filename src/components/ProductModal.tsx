@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -16,6 +16,7 @@ interface ProductModalProps {
     min_stock: number;
     max_stock: number | null;
     unit: string;
+    box_weight?: number;
   };
 }
 
@@ -29,6 +30,7 @@ export function ProductModal({ isOpen, onClose, onSuccess, product }: ProductMod
     min_stock: product?.min_stock || 0,
     max_stock: product?.max_stock || null,
     unit: product?.unit || 'UN',
+    box_weight: product?.box_weight || 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +143,22 @@ export function ProductModal({ isOpen, onClose, onSuccess, product }: ProductMod
               <option value="FD">Fardo (FD)</option>
             </select>
           </div>
+
+          {formData.unit === 'CX' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Peso da Caixa (kg)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.box_weight}
+                onChange={(e) => setFormData({ ...formData, box_weight: parseFloat(e.target.value) || 0 })}
+                className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
