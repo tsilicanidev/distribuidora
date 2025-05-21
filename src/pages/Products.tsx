@@ -60,20 +60,6 @@ export function Products() {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return;
 
     try {
-      // Check if the product is referenced in any sales order items
-      const { data: orderItems, error: checkError } = await supabase
-        .from('sales_order_items')
-        .select('id')
-        .eq('product_id', id)
-        .limit(1);
-
-      if (checkError) throw checkError;
-
-      if (orderItems && orderItems.length > 0) {
-        alert('Não é possível excluir este produto pois ele está vinculado a pedidos existentes.');
-        return;
-      }
-
       const { error } = await supabase
         .from('products')
         .delete()
