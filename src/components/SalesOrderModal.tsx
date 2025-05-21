@@ -233,6 +233,15 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
         currentItem.unit_price = price;
         currentItem.total_price = price * currentItem.quantity;
       }
+    } else if (field === 'total_price') {
+      const totalPrice = parseFloat(value) || 0;
+      if (totalPrice >= 0) {
+        currentItem.total_price = totalPrice;
+        // If quantity is valid, adjust unit price based on the new total
+        if (currentItem.quantity > 0) {
+          currentItem.unit_price = totalPrice / currentItem.quantity;
+        }
+      }
     } else if (field === 'selected_unit') {
       currentItem.selected_unit = value;
       
@@ -746,10 +755,12 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess, order }: SalesOrde
                     Total
                   </label>
                   <input
-                    type="text"
-                    readOnly
-                    value={item.total_price.toFixed(2)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 bg-gray-50"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.total_price}
+                    onChange={(e) => updateItem(index, 'total_price', parseFloat(e.target.value))}
+                    className="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-[#FF8A00] focus:border-[#FF8A00]"
                   />
                 </div>
 
