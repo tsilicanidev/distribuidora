@@ -60,20 +60,25 @@ export function Products() {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return;
 
     try {
-      // Check if the product is referenced in any sales order items
+      // Force delete the product by first removing references in sales_order_items
       const { data: orderItems, error: checkError } = await supabase
         .from('sales_order_items')
         .select('id')
-        .eq('product_id', id)
-        .limit(1);
+        .eq('product_id', id);
 
       if (checkError) throw checkError;
 
+      // If there are references, delete them first
       if (orderItems && orderItems.length > 0) {
-        alert('Não é possível excluir este produto pois ele está vinculado a pedidos de venda. Remova primeiro os pedidos relacionados.');
-        return;
+        const { error: deleteItemsError } = await supabase
+          .from('sales_order_items')
+          .delete()
+          .eq('product_id', id);
+
+        if (deleteItemsError) throw deleteItemsError;
       }
 
+      // Now delete the product
       const { error } = await supabase
         .from('products')
         .delete()
