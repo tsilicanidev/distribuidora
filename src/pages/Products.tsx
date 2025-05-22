@@ -14,6 +14,7 @@ interface Product {
   min_stock: number;
   max_stock: number | null;
   unit: string;
+  box_weight?: number;
 }
 
 export function Products() {
@@ -194,6 +195,11 @@ export function Products() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {getUnitLabel(product.unit)}
+                    {product.unit === 'CX' && product.box_weight && (
+                      <span className="ml-1 text-xs text-gray-400">
+                        ({product.box_weight} kg)
+                      </span>
+                    )}
                   </td>
                   {!isSeller && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
