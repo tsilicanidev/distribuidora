@@ -207,7 +207,7 @@ export function DeliveryNotes() {
         const { data: orderItems, error: orderItemsError } = await supabase
           .from('sales_order_items')
           .select(`
-            product:products!sales_order_items_product_id_fkey(name, unit),
+            product:products!sales_order_items_product_id_fkey(name, unit, box_weight),
             quantity,
             unit_price,
             total_price,
