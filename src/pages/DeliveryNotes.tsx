@@ -21,6 +21,7 @@ interface OrderItem {
   product: {
     name: string;
     unit: string;
+    box_weight?: number;
   };
   quantity: number;
   unit_price: number;
