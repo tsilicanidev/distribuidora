@@ -20,10 +20,13 @@ interface OrderItem {
   id: string;
   product: {
     name: string;
+    unit?: string;
+    box_weight?: number;
   };
   quantity: number;
   unit_price: number;
   total_price: number;
+  weight?: number;
 }
 
 interface SalesOrder {
@@ -133,7 +136,8 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
           quantity,
           unit_price,
           total_price,
-          product:products!sales_order_items_product_id_fkey(name)
+          weight,
+          product:products!sales_order_items_product_id_fkey(name, unit, box_weight)
         `)
         .eq('sales_order_id', order.id);
 
@@ -147,6 +151,17 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
   }
 
   if (!isOpen || !order) return null;
+
+  // Calculate total weight
+  const calculateTotalWeight = (item: OrderItem): number => {
+    if (item.weight) return item.weight;
+    
+    if (item.product.unit === 'CX' && item.product.box_weight) {
+      return item.quantity * item.product.box_weight;
+    }
+    
+    return 0;
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -250,33 +265,48 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Produto</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qtd</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Peso/Caixa</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Peso Total</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Valor Unit.</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.product.name}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900 text-right">
-                        R$ {item.unit_price.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900 text-right">
-                        R$ {item.total_price.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item) => {
+                    const boxWeight = item.product.unit === 'CX' ? item.product.box_weight || 0 : 0;
+                    const totalWeight = calculateTotalWeight(item);
+                    
+                    return (
+                      <tr key={item.id}>
+                        <td className="px-4 py-2 text-sm text-gray-900">{item.product.name}</td>
+                        <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                          {item.quantity} {item.product.unit || 'UN'}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                          {boxWeight > 0 ? `${boxWeight.toFixed(2)} kg` : '-'}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                          {totalWeight > 0 ? `${totalWeight.toFixed(2)} kg` : '-'}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                          R$ {item.unit_price.toFixed(2)}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                          R$ {item.total_price.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-300">
-                    <td colSpan={3} className="px-4 py-2 text-sm font-medium text-gray-900 text-right">Total:</td>
+                    <td colSpan={5} className="px-4 py-2 text-sm font-medium text-gray-900 text-right">Total:</td>
                     <td className="px-4 py-2 text-sm font-medium text-gray-900 text-right">
                       R$ {order.total_amount.toFixed(2)}
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-sm font-medium text-gray-900 text-right">Comissão:</td>
+                    <td colSpan={5} className="px-4 py-2 text-sm font-medium text-gray-900 text-right">Comissão:</td>
                     <td className="px-4 py-2 text-sm font-medium text-gray-900 text-right">
                       R$ {order.commission_amount.toFixed(2)}
                     </td>
