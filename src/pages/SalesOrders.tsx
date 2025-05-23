@@ -133,7 +133,7 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
           quantity,
           unit_price,
           total_price,
-          product:products(name)
+          product:products!sales_order_items_product_id_fkey(name)
         `)
         .eq('sales_order_id', order.id);
 
