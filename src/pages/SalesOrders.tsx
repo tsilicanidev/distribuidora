@@ -273,7 +273,7 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {items.map((item) => {
-                    const boxWeight = item.product.unit === 'CX' ? item.product.box_weight || 0 : 0;
+                    const boxWeight = item.product.box_weight || 0;
                     const totalWeight = calculateTotalWeight(item);
                     
                     return (

@@ -509,7 +509,8 @@ th, td {
                             <th style="width: 35px; text-align: center;">Qtd</th>
                             <th style="width: 35px; text-align: center;">Unid.</th>
                             <th style="width: 35px; text-align: center;">Caixas</th>
-                            <th style="width: 35px; text-align: center;">Peso</th>
+                            <th style="width: 35px; text-align: center;">Peso/Caixa</th>
+                            <th style="width: 35px; text-align: center;">Peso Total</th>
                             <th style="width: 50px; text-align: right;">V.Unit</th>
                             <th style="width: 50px; text-align: right;">V.Total</th>
                           </tr>
@@ -531,20 +532,27 @@ th, td {
                               boxCount = Math.ceil(orderItem.quantity / 2).toString();
                             }
                             
+                            // Calculate box weight and total weight
+                            const boxWeight = orderItem.product.box_weight || 0;
+                            const totalWeight = orderItem.product.unit === 'CX' 
+                              ? boxWeight * orderItem.quantity 
+                              : orderItem.weight || 0;
+                            
                             return `
                               <tr>
                                 <td>${orderItem.product.name}</td>
                                 <td style="text-align: center;">${orderItem.quantity}</td>
                                 <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
                                 <td style="text-align: center;">${boxCount}</td>
-                                <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) + ' kg' : '-'}</td>
+                                <td style="text-align: center;">${boxWeight > 0 ? boxWeight.toFixed(2) + ' kg' : '-'}</td>
+                                <td style="text-align: center;">${totalWeight > 0 ? totalWeight.toFixed(2) + ' kg' : '-'}</td>
                                 <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
                                 <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
                               </tr>
                             `;
                           }).join('')}
                           <tr class="total-row">
-                            <td colspan="6" style="text-align: right;"><strong>Total:</strong></td>
+                            <td colspan="7" style="text-align: right;"><strong>Total:</strong></td>
                             <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
                           </tr>
                         </tbody>
@@ -672,7 +680,8 @@ th, td {
                             <th style="width: 35px; text-align: center;">Qtd</th>
                             <th style="width: 35px; text-align: center;">Unid.</th>
                             <th style="width: 35px; text-align: center;">Caixas</th>
-                            <th style="width: 35px; text-align: center;">Peso</th>
+                            <th style="width: 35px; text-align: center;">Peso/Caixa</th>
+                            <th style="width: 35px; text-align: center;">Peso Total</th>
                             <th style="width: 50px; text-align: right;">V.Unit</th>
                             <th style="width: 50px; text-align: right;">V.Total</th>
                           </tr>
@@ -694,20 +703,27 @@ th, td {
                               boxCount = Math.ceil(orderItem.quantity / 2).toString();
                             }
                             
+                            // Calculate box weight and total weight
+                            const boxWeight = orderItem.product.box_weight || 0;
+                            const totalWeight = orderItem.product.unit === 'CX' 
+                              ? boxWeight * orderItem.quantity 
+                              : orderItem.weight || 0;
+                            
                             return `
                               <tr>
                                 <td>${orderItem.product.name}</td>
                                 <td style="text-align: center;">${orderItem.quantity}</td>
                                 <td style="text-align: center;">${orderItem.product.unit || 'UN'}</td>
                                 <td style="text-align: center;">${boxCount}</td>
-                                <td style="text-align: center;">${orderItem.weight ? orderItem.weight.toFixed(2) + ' kg' : '-'}</td>
+                                <td style="text-align: center;">${boxWeight > 0 ? boxWeight.toFixed(2) + ' kg' : '-'}</td>
+                                <td style="text-align: center;">${totalWeight > 0 ? totalWeight.toFixed(2) + ' kg' : '-'}</td>
                                 <td style="text-align: right;">R$ ${orderItem.unit_price.toFixed(2)}</td>
                                 <td style="text-align: right;">R$ ${orderItem.total_price.toFixed(2)}</td>
                               </tr>
                             `;
                           }).join('')}
                           <tr class="total-row">
-                            <td colspan="6" style="text-align: right;"><strong>Total:</strong></td>
+                            <td colspan="7" style="text-align: right;"><strong>Total:</strong></td>
                             <td style="text-align: right;"><strong>R$ ${item.order.total_amount.toFixed(2)}</strong></td>
                           </tr>
                         </tbody>
