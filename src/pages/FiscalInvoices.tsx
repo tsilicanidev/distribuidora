@@ -341,86 +341,88 @@ export function FiscalInvoices() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Número/Série
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data de Emissão
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Valor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInvoices.map((invoice, index) => (
-                <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {index + 1}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Série: {invoice.series}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {invoice.customer.razao_social}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {invoice.customer.cpf_cnpj}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(invoice.issue_date).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      R$ {invoice.total_amount.toFixed(2)}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Impostos: R$ {invoice.tax_amount.toFixed(2)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
-                      {getStatusText(invoice.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {invoice.xml_url && (
-                      <button
-                        onClick={() => downloadXML(invoice)}
-                        className="text-[#FF8A00] hover:text-[#FF8A00]/80 mr-3"
-                        title="Baixar XML"
-                      >
-                        <Download className="h-5 w-5" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => showDetails(invoice)}
-                      className="text-blue-600 hover:text-blue-900"
-                      title="Visualizar Detalhes"
-                    >
-                      <Eye className="h-5 w-5" />
-                    </button>
-                  </td>
+          <div className="overflow-x-auto" style={{ maxHeight: '70vh' }}>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Número/Série
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Data de Emissão
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Valor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredInvoices.map((invoice, index) => (
+                  <tr key={invoice.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {index + 1}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Série: {invoice.series}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {invoice.customer.razao_social}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {invoice.customer.cpf_cnpj}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(invoice.issue_date).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        R$ {invoice.total_amount.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Impostos: R$ {invoice.tax_amount.toFixed(2)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
+                        {getStatusText(invoice.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {invoice.xml_url && (
+                        <button
+                          onClick={() => downloadXML(invoice)}
+                          className="text-[#FF8A00] hover:text-[#FF8A00]/80 mr-3"
+                          title="Baixar XML"
+                        >
+                          <Download className="h-5 w-5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => showDetails(invoice)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Visualizar Detalhes"
+                      >
+                        <Eye className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
