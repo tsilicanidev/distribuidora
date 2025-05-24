@@ -129,6 +129,7 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
     setLoading(true);
 
     try {
+      // Fix the query to specify which foreign key to use
       const { data, error } = await supabase
         .from('sales_order_items')
         .select(`
