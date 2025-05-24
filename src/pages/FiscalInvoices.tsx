@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Search, X } from 'lucide-react';
+import { FileText, Download, Search, X, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { gerarDANFE } from '../lib/nfe/danfe';
 
@@ -247,7 +247,7 @@ function InvoiceDetailsModal({ isOpen, onClose, invoice }: InvoiceDetailsModalPr
               onClick={handleViewDANFE}
               className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
             >
-              <FileText className="h-5 w-5 mr-2" />
+              <Eye className="h-5 w-5 mr-2" />
               Visualizar DANFE
             </button>
           </div>
@@ -365,11 +365,11 @@ export function FiscalInvoices() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInvoices.map((invoice) => (
+              {filteredInvoices.map((invoice, index) => (
                 <tr key={invoice.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {invoice.number}
+                      {index + 1}
                     </div>
                     <div className="text-sm text-gray-500">
                       Série: {invoice.series}
@@ -414,7 +414,7 @@ export function FiscalInvoices() {
                       className="text-blue-600 hover:text-blue-900"
                       title="Visualizar Detalhes"
                     >
-                      <FileText className="h-5 w-5" />
+                      <Eye className="h-5 w-5" />
                     </button>
                   </td>
                 </tr>
