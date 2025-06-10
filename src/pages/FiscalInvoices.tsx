@@ -64,25 +64,25 @@ function InvoiceDetailsModal({ isOpen, onClose, invoice }: InvoiceDetailsModalPr
   if (!isOpen || !invoice) return null;
 
   
-  const handleViewDANFE = async () => {
-    if (!invoice || !invoice.xml_url) {
-      alert('XML da NFe não disponível');
-      return;
-    }
+const handleViewDANFE = async () => {
+  if (!invoice || !invoice.xml_url) {
+    alert('XML da NFe não disponível');
+    return;
+  }
 
-    try {
-      const response = await fetch(invoice.xml_url);
-      const xml = await response.text();
-      const pdfBuffer = await gerarDanfe(xml);
+  try {
+    const response = await fetch(invoice.xml_url);
+    const xml = await response.text();
+    const pdfBuffer = await gerarDanfe(xml);
 
-      const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-    } catch (err) {
-      console.error('Erro ao gerar DANFE:', err);
-      alert('Erro ao gerar DANFE');
-    }
-  };
+    const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch (err) {
+    console.error('Erro ao gerar DANFE:', err);
+    alert('Erro ao gerar DANFE');
+  }
+};
 
   
   // Função para gerar uma chave aleatória de 44 dígitos
