@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Search, X, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { gerarDANFE } from '../lib/nfe/danfe';
+import { gerarDanfe } from '../lib/nfe/danfe';
 
 interface FiscalInvoice {
   id: string;
@@ -63,60 +63,27 @@ const getStatusText = (status: string) => {
 function InvoiceDetailsModal({ isOpen, onClose, invoice }: InvoiceDetailsModalProps) {
   if (!isOpen || !invoice) return null;
 
+  
   const handleViewDANFE = async () => {
+    if (!invoice || !invoice.xml_url) {
+      alert('XML da NFe não disponível');
+      return;
+    }
+
     try {
-      if (!invoice.pdf_url) {
-        // Se não tiver URL, gerar o DANFE localmente
-        const chave = invoice.pdf_url?.split('/').pop() || generateRandomKey();
-        
-        const danfe = await gerarDANFE(
-          chave,
-          invoice.number,
-          invoice.series,
-          new Date(invoice.issue_date),
-          {
-            nome: '58957775 PATRICIA APARECIDA RAMOS DOS SANTOS',
-            cnpj: '58957775000130',
-            endereco: 'Rua Vanda',
-            bairro: 'Parque dos Camargos',
-            cidade: 'Barueri',
-            uf: 'SP',
-            cep: '06436380'
-          },
-          {
-            nome: invoice.customer.razao_social,
-            cpfCnpj: invoice.customer.cpf_cnpj,
-            endereco: invoice.customer.endereco || 'Não informado',
-            bairro: invoice.customer.bairro || 'Não informado',
-            cidade: invoice.customer.cidade || 'Não informado',
-            uf: invoice.customer.estado || 'SP',
-            cep: '00000000'
-          },
-          [
-            {
-              codigo: '001',
-              descricao: 'MERCADORIAS DIVERSAS',
-              quantidade: 1,
-              unidade: 'UN',
-              valorUnitario: invoice.total_amount,
-              valorTotal: invoice.total_amount
-            }
-          ],
-          invoice.total_amount
-        );
-        
-        // Criar URL para o blob e abrir em nova janela
-        const url = URL.createObjectURL(danfe);
-        window.open(url, '_blank');
-      } else {
-        // Se tiver URL, abrir diretamente
-        window.open(invoice.pdf_url, '_blank');
-      }
-    } catch (error) {
-      console.error('Erro ao gerar DANFE:', error);
-      alert('Erro ao gerar DANFE. Por favor, tente novamente.');
+      const response = await fetch(invoice.xml_url);
+      const xml = await response.text();
+      const pdfBuffer = await gerarDanfe(xml);
+
+      const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('Erro ao gerar DANFE:', err);
+      alert('Erro ao gerar DANFE');
     }
   };
+
   
   // Função para gerar uma chave aleatória de 44 dígitos
   function generateRandomKey(): string {
