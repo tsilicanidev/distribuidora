@@ -1,4 +1,3 @@
-
 import { gerarDanfePDF } from '@nfewizard-io/node';
 
 /**
