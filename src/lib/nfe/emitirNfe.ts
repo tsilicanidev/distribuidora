@@ -309,73 +309,55 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       };
     }
 
-    // Buscar itens do pedido com relacionamento explícito
+    // Buscar itens do pedido com produtos
     const { data: items, error: itemsError } = await supabase
       .from('sales_order_items')
-      .select('*')
+      .select(`
+        *,
+        product:products!sales_order_items_product_id_fkey(*)
+      `)
       .eq('sales_order_id', orderId);
 
-    // ✅ VERIFICAÇÃO ADICIONAL
     if (itemsError || !Array.isArray(items) || items.length === 0) {
       console.error('Erro ao buscar itens do pedido:', itemsError);
       throw new Error('Itens do pedido não encontrados ou inválidos');
     }
 
-    console.log('Items:', items); // útil para depuração
+    console.log('Items encontrados:', items);
 
-    // ✅ LAÇO SEGURO
+    // Verificar e atualizar estoque para cada item
     for (const item of items) {
-      const { data: [product], error: productError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', item.product_id);
-
-      if (productError || !product) {
-        throw new Error(`Erro ao buscar produto para item ${item.id}`);
+      if (!item.product) {
+        throw new Error(`Produto não encontrado para o item ${item.id}`);
       }
 
-      item.product = product;
-    }
-
-    if (itemsError) {
-      console.error('Erro ao buscar itens do pedido:', itemsError);
-      throw new Error('Erro ao buscar itens do pedido');
-    }
-
-    if (!items || items.length === 0) {
-      console.error('Nenhum item encontrado para o pedido:', orderId);
-      throw new Error('Itens do pedido não encontrados');
-    }
-
-    // Atualizar estoque
-    for (const item of items) {
-      const { data: product, error: productError } = await supabase
+      // Verificar estoque atual
+      const { data: currentProduct, error: productError } = await supabase
         .from('products')
-        .select('stock_quantity')
+        .select('stock_quantity, name')
         .eq('id', item.product_id)
         .single();
 
-      if (productError) {
-        console.error('Erro ao buscar produto:', productError);
+      if (productError || !currentProduct) {
+        console.error('Erro ao buscar produto atual:', productError);
         throw new Error(`Erro ao buscar produto ${item.product.name}`);
       }
 
-      if (!product) {
-        throw new Error(`Produto ${item.product.name} não encontrado`);
+      // Verificar se há estoque suficiente
+      if (currentProduct.stock_quantity < item.quantity) {
+        throw new Error(`Estoque insuficiente para o produto ${currentProduct.name}. Disponível: ${currentProduct.stock_quantity}, Solicitado: ${item.quantity}`);
       }
 
-      if (product.stock_quantity < item.quantity) {
-        throw new Error(`Estoque insuficiente para o produto ${item.product.name}`);
-      }
-
+      // Atualizar estoque
+      const newStockQuantity = currentProduct.stock_quantity - item.quantity;
       const { error: updateError } = await supabase
         .from('products')
-        .update({ stock_quantity: product.stock_quantity - item.quantity })
+        .update({ stock_quantity: newStockQuantity })
         .eq('id', item.product_id);
 
       if (updateError) {
         console.error('Erro ao atualizar estoque:', updateError);
-        throw new Error(`Erro ao atualizar estoque do produto ${item.product.name}`);
+        throw new Error(`Erro ao atualizar estoque do produto ${currentProduct.name}`);
       }
       
       // Registrar movimentação de estoque
@@ -466,7 +448,6 @@ export async function processarEmissaoNFe(orderId: string): Promise<{
       // Criar nova nota fiscal
       const { error: fiscalInvoiceError } = await supabase
         .from('fiscal_invoices')
-        
         .insert([{
           number: order.number,
           series: '1',
